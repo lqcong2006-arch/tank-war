@@ -67,8 +67,11 @@ h1{font-size:clamp(28px,4.5vw,42px);line-height:1.05;margin:0 0 10px}
 .case.fs{position:fixed;inset:0;z-index:100;border-radius:0;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:8px;overflow:auto;padding:8px;background:#1a0f0a}
 .case.fs .screen{width:min(100%,calc((100dvh - 92px)*16/9));flex:none}
 .case.fs .screen+.panel,.case.fs .panel{width:min(100%,1100px);margin-top:0;flex:none;min-height:0}
-.case.fs .screen:has(+.panel:not([hidden])){width:min(100%,calc((100dvh - 190px)*16/9))}   /* ở menu chính: thu nhỏ cảnh để vừa chỗ cho nút */
-.case.fs .home h2{font-size:28px}
+.case.fs .screen:has(+.panel:not([hidden])){width:min(100%,calc((100dvh - 150px)*16/9))}   /* ở menu chính: thu nhỏ cảnh để vừa chỗ cho nút */
+.case.fs .home h2{font-size:24px;margin:0}
+.case.fs .panel:has(.home){padding:10px 16px}
+.case.fs .home .row{gap:8px}
+.case.fs .home .row button{min-height:42px;font-size:16px;padding:4px 16px}
 .case.fs .pad{padding-top:0}
 .case.fs:fullscreen{background:#1a0f0a}
 @media(max-width:700px){.case.fs .screen{width:min(100%,calc((100dvh - 150px)*16/9))}}
@@ -76,19 +79,25 @@ h1{font-size:clamp(28px,4.5vw,42px);line-height:1.05;margin:0 0 10px}
 .pad{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding-top:10px}
 .pad button{font-size:16px;padding:4px 13px}
 /* ---- Điều khiển cảm ứng ---- */
-.screen,.pad{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;touch-action:none}
+.screen,.pad{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+/* SỬA LỖI VUỐT: chỉ chặn cử chỉ vuốt/phóng to ở khung game KHI ĐANG ĐÁNH và ở các nút điều khiển.
+   Menu, thẻ xe, thẻ màn, cảnh mở đầu vẫn vuốt để cuộn trang bình thường. */
+.screen.playing,.tb,.pad [data-k],.touch{touch-action:none}
+button{touch-action:manipulation}
+.tb,.pad [data-k]{touch-action:none}
 .touch[hidden]{display:none}
 .touch{position:absolute;inset:0;pointer-events:none}
-.tpad,.tact{position:absolute;bottom:calc(9.3% + 8px);pointer-events:auto}
-.tpad{left:2%;display:flex;gap:10px}
-.tang{display:grid;gap:6px}
-.touch{--tb:clamp(38px,7.5%,62px)}
-.tb{width:var(--tb);height:var(--tb);min-width:0;min-height:0;padding:0;border-radius:50%;background:rgba(20,10,30,.42);color:#fff;font-size:clamp(14px,2.4vw,22px);border:2px solid rgba(255,255,255,.35);backdrop-filter:blur(2px)}
+.tpad,.tact{position:absolute;bottom:calc(9.3% + 10px);pointer-events:auto}
+/* Cỡ nút tính theo màn hình (vw/vh), không theo khung chứa, nên luôn đủ to để bấm bằng ngón cái */
+.touch{--tb:clamp(50px,min(7vw,13vh),72px);--gap:clamp(12px,2vw,20px)}
+.tpad{left:2.5%;display:flex;gap:var(--gap)}
+.tang{display:grid;gap:calc(var(--gap)*.7)}
+.tb{flex:none;width:var(--tb);height:var(--tb);min-width:0;min-height:0;padding:0;border-radius:50%;background:rgba(20,10,30,.32);color:#fff;font-size:calc(var(--tb)*.38);border:2px solid rgba(255,255,255,.45);backdrop-filter:blur(2px)}
 .tb:active,.tb.down{background:rgba(255,216,74,.55);color:#2a1030}
-.tact{right:2%;display:flex;align-items:flex-end;gap:10px}
-.fireb{--s:calc(var(--tb)*1.75);width:var(--s);height:var(--s);background:rgba(255,90,54,.75);border-color:rgba(255,255,255,.6);font-size:clamp(16px,3vw,26px);display:grid;place-content:center;line-height:1.05}
+.tact{right:2.5%;display:flex;align-items:flex-end;gap:var(--gap)}
+.fireb{--s:calc(var(--tb)*1.45);width:var(--s);height:var(--s);background:rgba(255,90,54,.62);border-color:rgba(255,255,255,.6);font-size:calc(var(--tb)*.36);display:grid;place-content:center;line-height:1.05}
 .fireb small{font-size:.45em;font-weight:700;opacity:.85}
-.sk{font-size:clamp(10px,1.6vw,14px);line-height:1.1;opacity:.55}
+.sk{font-size:calc(var(--tb)*.2);line-height:1.1;opacity:.6;margin-bottom:calc(var(--tb)*.3)}
 .sk.ready{opacity:1;background:rgba(255,216,74,.8);color:#2a1030;box-shadow:0 0 16px #ffd84a;animation:pulse 1s infinite}
 .sk.on{background:#ffd84a;color:#2a1030;box-shadow:0 0 22px #fff}
 @keyframes pulse{50%{transform:scale(1.08)}}
@@ -98,7 +107,7 @@ h1{font-size:clamp(28px,4.5vw,42px);line-height:1.05;margin:0 0 10px}
 @media (pointer:coarse) and (orientation:portrait){.rotate{display:block}}
 .touchdev .case.fs .screen{width:min(100%,calc((100dvh - 62px)*16/9))}
 .touchdev .case.fs .pad button{font-size:13px;min-height:38px;padding:2px 12px}
-button{font:inherit;font-weight:800;font-size:18px;min-height:48px;min-width:56px;padding:4px 18px;border:0;border-radius:14px;background:#f3e2cc;color:#3a2418;cursor:pointer;touch-action:none;user-select:none}
+button{font:inherit;font-weight:800;font-size:18px;min-height:48px;min-width:56px;padding:4px 18px;border:0;border-radius:14px;background:#f3e2cc;color:#3a2418;cursor:pointer;user-select:none}
 button:focus-visible{outline:3px solid #ffd84a;outline-offset:2px}
 .fire{background:#ff5a36;color:#fff;min-width:140px}
 .skill{background:#ffd84a}
@@ -264,6 +273,7 @@ for(const L of LEVELS){L.waves=L.waves||[L.enemies];L.enemies=L.waves[0]}   // m
 
 // ===== BƯỚC 6: TRẠNG THÁI GAME =====
 let ground=new Float32Array(W),theme=THEMES.desert,decor=[];
+let ground0=new Float32Array(W);   // mặt đất BAN ĐẦU: các tầng màu của đất bám theo mặt này, nên không bị lõm theo hố đạn
 const bgCanvas=document.createElement('canvas');bgCanvas.width=W;bgCanvas.height=H;   // nền vẽ sẵn 1 lần mỗi trận
 let mode='ai',level=0,unlocked=1,pickP1='rapid',pickP2='flame',pvpMap='random';   // 'random' = bốc thăm khi vào trận
 
@@ -365,6 +375,7 @@ const makeTerrain=key=>{
   theme=THEMES[key];
   const s=[rand(0,6),rand(0,6),rand(0,6)];
   for(let x=0;x<W;x++)ground[x]=Math.min(H+60,theme.gen(x,s));
+  ground0.set(ground);
   paintBackground();
   decor=[];
   for(let i=0;i<16;i++){
@@ -476,7 +487,7 @@ const safeX=(pref,taken)=>{
     if(x<W*.42||x>W-30)continue;
     if(groundAt(x)<H-50&&Math.abs(groundAt(x+15)-groundAt(x-15))<30&&!taken.some(t=>Math.abs(t-x)<70))return x;
   }
-  const y=H*.7;for(let x=Math.max(0,pref-40);x<Math.min(W,pref+40);x++)ground[x]=Math.min(ground[x],y+Math.abs(x-pref)*.4);
+  const y=H*.7;for(let x=Math.max(0,pref-40);x<Math.min(W,pref+40);x++){ground[x]=Math.min(ground[x],y+Math.abs(x-pref)*.4);ground0[x]=Math.min(ground0[x],ground[x])}
   return pref;
 };
 const spawnWave=(i,drop)=>{
@@ -1324,13 +1335,20 @@ const drawDecor=d=>{
 };
 // Đất nhiều tầng: mỗi tầng là mặt đất dịch xuống một đoạn, tầng sau đè lên tầng trước
 const STRATA=[0,7,42,100,170];
+// Mỗi tầng i bắt đầu từ (mặt đất ban đầu + STRATA[i]) và không cao hơn mặt đất hiện tại.
+// Nhờ vậy hố đạn chỉ khoét lớp mặt và để lộ lớp đất bên dưới, các tầng sâu vẫn nằm yên.
 const drawGround=()=>{
+  const top=(x,i)=>ground[x]>H?H+80:Math.max(ground[x],ground0[x]+STRATA[i]);
   for(let i=0;i<STRATA.length;i++){
     ctx.beginPath();ctx.moveTo(0,H+80);
-    for(let x=0;x<W;x+=2)ctx.lineTo(x,ground[x]>H?H+80:ground[x]+STRATA[i]);
-    ctx.lineTo(W,ground[W-1]>H?H+80:ground[W-1]+STRATA[i]);ctx.lineTo(W,H+80);ctx.closePath();
+    for(let x=0;x<W;x+=2)ctx.lineTo(x,top(x,i));
+    ctx.lineTo(W,top(W-1,i));ctx.lineTo(W,H+80);ctx.closePath();
     ctx.fillStyle=theme.layers[i];ctx.fill();
   }
+  // viền tối quanh lòng hố (chỗ đất đã bị đào) cho hố có chiều sâu
+  ctx.strokeStyle='rgba(40,20,10,.32)';ctx.lineWidth=3;ctx.lineJoin='round';ctx.beginPath();let on=false;
+  for(let x=0;x<W;x+=2){const dug=ground[x]<=H&&ground[x]>ground0[x]+3;if(dug){on?ctx.lineTo(x,ground[x]+1.5):ctx.moveTo(x,ground[x]+1.5);on=true}else on=false}
+  ctx.stroke();
 };
 
 // ===== BƯỚC 16: VẼ CẢ KHUNG HÌNH =====
@@ -1478,6 +1496,7 @@ const startHero=()=>{
   while(b===a)b=ks[Math.floor(Math.random()*ks.length)];
   theme=THEMES.desert;
   for(let x=0;x<W;x++)ground[x]=H*.74+Math.sin(x/130)*16+Math.sin(x/47)*5;
+  ground0.set(ground);
   paintBackground();
   decor=[60,420,540,880,930].map((x,i)=>({x,type:i%2?'rock':'cactus',s:1.3,flip:1}));
   wind=5;airs=[];motes=[];smoke=[];blasts=[];muzzles=[];
@@ -1706,7 +1725,7 @@ const playerName=()=>curProfile()?.name||'Bạn';
 // Màn hình chính: Chơi tiếp / Chơi mới / Chọn người chơi
 const showTitle=()=>{
   const pr=lastProfile();
-  show(`<div class="home"><div><h2>Chào mừng đến Tank War</h2><p>${pr?`Lần chơi gần nhất: <b>${esc(pr.name)}</b> · ${profileStats(pr)}`:'Tạo người chơi mới để bắt đầu. Tiến trình của mỗi người chơi được lưu riêng trên trình duyệt này.'}</p></div>
+  show(`<div class="home"><div><h2>Tank War</h2><p class="who">${pr?`Chơi tiếp với <b>${esc(pr.name)}</b> · ${fmt(pr.data.coins||0)} vàng`:'Tạo người chơi để bắt đầu'}</p></div>
     <div class="row">${pr?`<button class="main" data-act="continue" type="button">Chơi tiếp</button>`:''}<button class="main ${pr?'alt':''}" data-act="newgame" type="button">Chơi mới</button>${profiles.list.length?`<button class="ghost" data-act="profiles" type="button">Chọn người chơi</button>`:''}<button class="ghost fsBtn" type="button">Toàn màn hình</button></div></div>`,true);
 };
 const showNameForm=(renameId)=>{
@@ -1740,7 +1759,7 @@ const submitName=form=>{
   makeProfile(name);sfx.ready();showStarter('modes');
 };
 
-const showModes=()=>{if(!curProfile())return showTitle();show(`<div class="home"><div><h2>Chọn chế độ chơi</h2><p class="who">Người chơi: <b>${esc(playerName())}</b> · ${profileStats(curProfile())} · <button class="link" data-act="renameme" type="button">Đổi tên</button> · <button class="link" data-act="title" type="button">Đổi người chơi</button></p><p>Đánh với máy qua 15 màn khó dần: có màn đấu cùng lúc 2–3 xe địch, màn 2 giai đoạn và màn đấu trùm. Chế độ vô tận: hạ địch liên tục để kiếm vàng. Hoặc rủ bạn bè đấu 2 người trên cùng một máy.</p></div>
+const showModes=()=>{if(!curProfile())return showTitle();show(`<div class="home"><div><h2>Chọn chế độ</h2><p class="who"><b>${esc(playerName())}</b> · ${fmt(coins)} vàng · máu ${playerHp()} · <button class="link" data-act="renameme" type="button">Đổi tên</button> · <button class="link" data-act="title" type="button">Đổi người chơi</button></p></div>
   <div class="row"><button class="main" data-act="campaign" type="button">Đánh với máy</button><button class="main end" data-act="endless" type="button">Vô tận</button><button class="main alt" data-act="pvp" type="button">2 người chơi</button><button class="ghost fsBtn" type="button">Toàn màn hình</button></div></div>`,true)};
 const showMenu=()=>curProfile()?showModes():showTitle();
 const showEndless=()=>show(`<h2>Chế độ vô tận</h2>${walletHtml()}
@@ -1897,7 +1916,9 @@ for(const b of document.querySelectorAll('.tb')){                   // nút sán
   b.addEventListener('pointerdown',()=>b.classList.add('down'));
   for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>b.classList.remove('down'));
 }
+const screenEl=$('screen');
 const updateTouchUi=()=>{
+  const playing=!hero&&state!=='menu';if(screenEl.classList.contains('playing')!==playing)screenEl.classList.toggle('playing',playing);
   const show=isTouch&&!hero&&state!=='menu'&&state!=='victory'&&state!=='intro';
   if(touchEl.hidden===show)touchEl.hidden=!show;
   if(show){const p=cur(),mine=p&&!p.isAI&&state==='aim';tSkill.classList.toggle('ready',!!(mine&&p.energy>=100&&!p.useSkill));tSkill.classList.toggle('on',!!(mine&&p.useSkill))}
