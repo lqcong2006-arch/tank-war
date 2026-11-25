@@ -19,7 +19,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Baloo 2",sys
 h1{font-size:clamp(28px,4.5vw,42px);line-height:1.05;margin:0 0 10px}
 .case{background:var(--case);border-radius:20px;padding:10px;box-shadow:0 16px 36px rgba(40,20,10,.35)}
 .screen{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000}
-.screen canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.screen canvas{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain}
 .panel{background:#2a1a12;color:#fbefe2;border-radius:12px;padding:clamp(16px,3vw,28px);min-height:360px}
 .panel[hidden],.screen[hidden],.pad[hidden]{display:none}
 .panel h2{font-size:clamp(28px,4vw,40px);line-height:1.05;margin:0 0 6px;color:#ffd84a}
@@ -105,6 +105,16 @@ button{touch-action:manipulation}
 .touchdev .pad [data-k]{display:none}               /* điện thoại: nút điều khiển nằm trên màn hình game, thanh dưới chỉ còn Âm thanh / Toàn màn hình / Menu */
 .rotate{display:none;margin:0 0 8px;padding:8px 12px;border-radius:10px;background:#ffd84a;color:#2a1030;font-weight:800;text-align:center}
 @media (pointer:coarse) and (orientation:portrait){.rotate{display:block}}
+/* Toàn màn hình khi đang đánh: khung game phủ kín màn hình, không còn viền đen */
+.case.fs .screen.playing{position:fixed;inset:0;width:auto!important;height:auto;aspect-ratio:auto;border-radius:0;z-index:5}
+.case.fs .pad,.touchdev .pad{display:none!important}
+/* Nút cài đặt + bảng tạm dừng */
+.gear[hidden],.sheet[hidden]{display:none}
+.gear{position:absolute;z-index:4;top:clamp(6px,1.4%,12px);left:calc(50% + 7.5%);width:40px;height:40px;min-width:0;min-height:0;padding:0;border-radius:50%;display:grid;place-items:center;background:rgba(34,18,40,.6);color:#fff;border:2px solid rgba(255,255,255,.35)}
+.sheet{position:absolute;inset:0;z-index:6;display:grid;place-items:center;background:rgba(10,5,20,.6);touch-action:manipulation}
+.sheet-box{display:grid;gap:10px;min-width:min(280px,80%);padding:20px;border-radius:18px;background:#2a1a12;color:#fbefe2;box-shadow:0 16px 40px rgba(0,0,0,.4)}
+.sheet-box h3{margin:0 0 4px;font-size:24px;color:#ffd84a;text-align:center}
+.sheet-box button{width:100%}
 .touchdev .case.fs .screen{width:min(100%,calc((100dvh - 62px)*16/9))}
 .touchdev .case.fs .pad button{font-size:13px;min-height:38px;padding:2px 12px}
 button{font:inherit;font-weight:800;font-size:18px;min-height:48px;min-width:56px;padding:4px 18px;border:0;border-radius:14px;background:#f3e2cc;color:#3a2418;cursor:pointer;user-select:none}
@@ -124,6 +134,15 @@ button:focus-visible{outline:3px solid #ffd84a;outline-offset:2px}
   <div class="case">
     <p class="rotate">Xoay ngang điện thoại để chơi thoải mái hơn</p>
     <div class="screen" id="screen" hidden><canvas id="cv" width="960" height="540"></canvas>
+      <!-- Nút cài đặt ở trên cùng màn hình: bấm vào thì tạm dừng và mở bảng cài đặt -->
+      <button class="gear" id="gearBtn" type="button" aria-label="Cài đặt" hidden><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.6h4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button>
+      <div class="sheet" id="sheet" hidden><div class="sheet-box" role="dialog" aria-label="Cài đặt">
+        <h3>Tạm dừng</h3>
+        <button class="main" id="resumeBtn" type="button">Tiếp tục chơi</button>
+        <button class="ghost" id="soundBtn" type="button">Âm thanh: Bật</button>
+        <button class="ghost fsBtn" type="button">Toàn màn hình</button>
+        <button class="ghost" id="quitBtn" type="button">Về menu</button>
+      </div></div>
       <!-- Nút cảm ứng (chỉ hiện trên điện thoại / máy tính bảng) -->
       <div class="touch" id="touch" hidden>
         <div class="tpad">
@@ -145,12 +164,9 @@ button:focus-visible{outline:3px solid #ffd84a;outline-offset:2px}
       <button data-k="down" type="button" aria-label="Giảm góc">S Góc −</button>
       <button class="skill" data-k="skill" type="button">E Kỹ năng</button>
       <button class="fire" data-k="fire" type="button">Giữ để bắn</button>
-      <button class="ghost" id="soundBtn" type="button">Âm thanh: Bật</button>
-      <button class="ghost fsBtn" type="button">Toàn màn hình</button>
-      <button class="ghost" id="quitBtn" type="button">Menu</button>
     </div>
   </div>
-  <p class="help"><b>Điện thoại:</b> dùng nút ◀ ▶ để đi, ▲ ▼ chỉnh góc, giữ nút BẮN để nạp lực rồi thả ra, nút KỸ NĂNG sáng lên khi đầy năng lượng. <b>Máy tính:</b> <b>A / D</b> di chuyển (tốn xăng) · <b>W / S</b> chỉnh góc · <b>giữ Space</b> nạp lực, <b>thả ra</b> để bắn · Luồng khí trắng trên bản đồ cho biết hướng và độ mạnh của gió · <b>F</b> bật/tắt toàn màn hình · <b>E</b> bật kỹ năng khi thanh năng lượng (màu vàng) đầy 100%. Mỗi phát bắn +10% năng lượng; bắn trúng đối thủ hoặc bị trúng đạn được cộng thêm theo sát thương. Hòm tiếp tế thả dù ngẫu nhiên: lái xe chạm vào hoặc bắn nổ gần hòm để nhận <b style="color:#2f9e4a">hồi máu</b>, <b style="color:#2f7fd6">khiên</b>, <b style="color:#b88a00">năng lượng đầy</b> hoặc <b style="color:#1aa7a7">tăng tốc</b>; khi đánh với máy còn có <b style="color:#b88a00">hòm vàng</b> để kiếm tiền mua xe mới.</p>
+  <p class="help"><b>Điện thoại:</b> dùng nút ◀ ▶ để đi, ▲ ▼ chỉnh góc, giữ nút BẮN để nạp lực rồi thả ra, nút KỸ NĂNG sáng lên khi đầy năng lượng. <b>Máy tính:</b> <b>A / D</b> di chuyển (tốn xăng) · <b>W / S</b> chỉnh góc · <b>giữ Space</b> nạp lực, <b>thả ra</b> để bắn · Luồng khí trắng trên bản đồ cho biết hướng và độ mạnh của gió · <b>F</b> bật/tắt toàn màn hình · <b>Esc</b> hoặc nút ⚙ để tạm dừng · <b>E</b> bật kỹ năng khi thanh năng lượng (màu vàng) đầy 100%. Mỗi phát bắn +10% năng lượng; bắn trúng đối thủ hoặc bị trúng đạn được cộng thêm theo sát thương. Hòm tiếp tế thả dù ngẫu nhiên: lái xe chạm vào hoặc bắn nổ gần hòm để nhận <b style="color:#2f9e4a">hồi máu</b>, <b style="color:#2f7fd6">khiên</b>, <b style="color:#b88a00">năng lượng đầy</b> hoặc <b style="color:#1aa7a7">tăng tốc</b>; khi đánh với máy còn có <b style="color:#b88a00">hòm vàng</b> để kiếm tiền mua xe mới.</p>
 </div>
 <script>
 {
@@ -384,7 +400,8 @@ const makeTerrain=key=>{
     decor.push({x,type:theme.decor[i%theme.decor.length],s:rand(.7,1.25),flip:Math.random()<.5?-1:1});
   }
 };
-const groundAt=x=>{const i=Math.round(x);return i<0||i>=W?H+60:ground[i]};
+// Ngoài mép bản đồ coi như mặt đất kéo dài bằng mép (để phần nối dài ở 2 bên màn hình rộng trông liền mạch)
+const groundAt=x=>{const i=Math.round(x);return ground[i<0?0:i>=W?W-1:i]};
 const dig=(cx,cy,r)=>{
   for(let x=Math.max(0,Math.floor(cx-r));x<Math.min(W,Math.ceil(cx+r));x++){
     const dy=Math.sqrt(Math.max(0,r*r-(x-cx)**2));
@@ -512,7 +529,7 @@ const drawPhase=()=>{
   const t=phaseT,a=Math.min(1,t/.3)*(t>PHASE_MIN?Math.max(0,1-(t-PHASE_MIN)/.5):1);
   if(a<=0)return;
   ctx.save();ctx.globalAlpha=a;
-  ctx.fillStyle='rgba(20,8,26,.6)';ctx.fillRect(0,H/2-110,W,170);
+  ctx.fillStyle='rgba(20,8,26,.6)';ctx.fillRect(-view.ox,H/2-110,view.w,170);
   const k=Math.min(1,t/.45),back=1+2.2*(k-1)**3+1.2*(k-1)**2;
   ctx.save();ctx.translate(W/2,H/2-30);ctx.scale(back,back);bigTitle(mode==='endless'?'VIỆN BINH ĐỊCH':'GIAI ĐOẠN '+(wave+1),0,0,64,'#ffd84a');ctx.restore();
   ctx.font='800 20px "Baloo 2",sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';
@@ -747,6 +764,8 @@ const press=k=>{
 const release=k=>{if(k==='fire'&&charging&&humanTurn())fire()};
 addEventListener('keydown',e=>{
   if(e.target.closest&&e.target.closest('input,textarea'))return;   // đang gõ tên: không coi là phím điều khiển
+  if(e.code==='Escape'&&state!=='menu'){e.preventDefault();paused?closeSheet():openSheet();return}
+  if(paused)return;
   const k=KEYMAP[e.code];
   if(state==='victory'){e.preventDefault();skipWin();return}
   if(state==='intro'){e.preventDefault();startTurn()}               // bỏ qua màn giới thiệu, và phím này vẫn được tính luôn
@@ -940,7 +959,7 @@ const drawCutin=()=>{
   const {p,t}=cutin,ein=Math.min(1,t/.22),eout=t>CUT_TIME-.3?(t-(CUT_TIME-.3))/.3:0;
   const slide=(1-(1-ein)**3)-eout,off=(1-slide)*W*(p.team?1:-1),cy=H/2-30;
   ctx.save();ctx.globalAlpha=Math.min(1,slide*1.5);
-  ctx.fillStyle=`rgba(255,255,255,${.25*(1-ein)})`;ctx.fillRect(0,0,W,H);            // chớp sáng lúc mới hiện
+  ctx.fillStyle=`rgba(255,255,255,${.25*(1-ein)})`;fillView();            // chớp sáng lúc mới hiện
   ctx.translate(off,0);
   ctx.beginPath();ctx.moveTo(0,cy-62);ctx.lineTo(W,cy-86);ctx.lineTo(W,cy+62);ctx.lineTo(0,cy+86);ctx.closePath();
   ctx.fillStyle=p.T.color;ctx.fill();ctx.fillStyle='rgba(0,0,0,.28)';ctx.fill();
@@ -988,7 +1007,7 @@ const updateRods=dt=>{
 const drawRods=()=>{
   // trời tối dần và mây giông kéo tới khi sắp có sét
   const k=rods.reduce((m,r)=>Math.max(m,r.t/ROD_DELAY),0);
-  if(k>0){ctx.fillStyle=`rgba(12,14,40,${.45*k})`;ctx.fillRect(-20,-20,W+40,H+40)}
+  if(k>0){ctx.fillStyle=`rgba(12,14,40,${.45*k})`;fillView()}
   for(const r of rods){
     const p=r.t/ROD_DELAY;
     ctx.save();ctx.globalAlpha=p;                                       // mây giông ngay phía trên cột
@@ -1341,8 +1360,9 @@ const drawGround=()=>{
   const top=(x,i)=>ground[x]>H?H+80:Math.max(ground[x],ground0[x]+STRATA[i]);
   for(let i=0;i<STRATA.length;i++){
     ctx.beginPath();ctx.moveTo(0,H+80);
-    for(let x=0;x<W;x+=2)ctx.lineTo(x,top(x,i));
-    ctx.lineTo(W,top(W-1,i));ctx.lineTo(W,H+80);ctx.closePath();
+    const x0=-Math.ceil(view.ox)-4,x1=W+Math.ceil(view.ox)+4;ctx.lineTo(x0,H+80);
+    for(let x=x0;x<x1;x+=2)ctx.lineTo(x,top(clamp(x,0,W-1),i));
+    ctx.lineTo(x1,top(W-1,i));ctx.lineTo(x1,H+80);ctx.closePath();
     ctx.fillStyle=theme.layers[i];ctx.fill();
   }
   // viền tối quanh lòng hố (chỗ đất đã bị đào) cho hố có chiều sâu
@@ -1375,12 +1395,39 @@ const drawAimGuide=p=>{
   }
   ctx.globalAlpha=1;
 };
+// ===== KHUNG NHÌN: màn hình dài hơn 16:9 thì mở rộng 2 bên, cao hơn thì mở rộng phía trên =====
+// Thế giới game vẫn là 960x540 ở giữa; phần dư được lấp bằng nền soi gương, trời và mặt đất kéo dài.
+const view={w:W,h:H,ox:0,oy:0};
+const fillView=()=>ctx.fillRect(-view.ox-20,-view.oy-20,view.w+40,view.h+40);
+const fitView=()=>{
+  let vw=W,vh=H;const sc=$('screen');
+  if(typeof isFs==='function'&&isFs()&&sc.classList.contains('playing')){
+    const cw=sc.clientWidth,ch=sc.clientHeight;
+    if(cw&&ch){const a=clamp(cw/ch,1.2,2.6);if(a>W/H)vw=Math.round(H*a);else vh=Math.round(W/a)}
+  }
+  if(cv.width!==vw||cv.height!==vh){cv.width=vw;cv.height=vh}
+  view.w=vw;view.h=vh;view.ox=(vw-W)/2;view.oy=vh-H;
+};
+// đổi kích thước cửa sổ / xoay màn hình / vào-ra toàn màn hình: tính lại khung nhìn và vẽ lại ngay
+for(const ev of ['resize','orientationchange'])addEventListener(ev,()=>{fitView();if(!$('screen').hidden&&!hero)draw()});
+document.addEventListener('fullscreenchange',()=>setTimeout(()=>{fitView();if(!$('screen').hidden&&!hero)draw()},50));
+const drawMargins=()=>{
+  const {ox,oy}=view;
+  ctx.fillStyle=theme.sky[0];ctx.fillRect(0,0,view.w,view.h);
+  if(ox>0){                                                        // soi gương phần nền ở 2 mép sang 2 bên
+    ctx.save();ctx.translate(ox,oy);ctx.scale(-1,1);ctx.drawImage(bgCanvas,0,0,ox,H,0,0,ox,H);ctx.restore();
+    ctx.save();ctx.translate(ox+W,oy);ctx.scale(-1,1);ctx.drawImage(bgCanvas,W-ox,0,ox,H,-ox,0,ox,H);ctx.restore();
+  }
+};
 const draw=()=>{
+  ctx.setTransform(1,0,0,1,0,0);
+  if(view.ox||view.oy)drawMargins();
+  ctx.translate(view.ox,view.oy);
   ctx.save();
   if(shake>0)ctx.translate(rand(-.5,.5)*20*shake,rand(-.5,.5)*20*shake);
   ctx.drawImage(bgCanvas,0,0);
   drawAir();
-  if(theme.water){ctx.fillStyle='#2f86d6';ctx.fillRect(-20,H-46,W+40,70);ctx.fillStyle='rgba(255,255,255,.35)';for(let x=-40;x<W;x+=40)ctx.fillRect(x+(performance.now()/40%40),H-46,18,3)}
+  if(theme.water){ctx.fillStyle='#2f86d6';ctx.fillRect(-view.ox-20,H-46,view.w+40,70);ctx.fillStyle='rgba(255,255,255,.35)';for(let x=-40;x<W;x+=40)ctx.fillRect(x+(performance.now()/40%40),H-46,18,3)}
   drawGround();
   for(const d of decor)drawDecor(d);
   drawZones();
@@ -1414,8 +1461,8 @@ const draw=()=>{
   for(const o of blasts){const k=o.t/.7;dot(ctx,o.x,o.y,o.r*(.6+k*.8),`rgba(${o.col},${1-k})`);dot(ctx,o.x,o.y,o.r*(.3+k*.5),`rgba(255,250,220,${(1-k)*.8})`)}
   for(const q of texts){ctx.globalAlpha=Math.min(1,q.life);ctx.fillStyle=q.col||'#ff3b2f';ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.font='800 22px "Baloo 2",sans-serif';ctx.textAlign='center';ctx.strokeText(q.txt,q.x,q.y);ctx.fillText(q.txt,q.x,q.y)}
   ctx.globalAlpha=1;
-  if(flash>0){ctx.fillStyle=`rgba(255,80,40,${flash})`;ctx.fillRect(-20,-20,W+40,H+40)}
-  if(whiteFlash>0){ctx.fillStyle=`rgba(235,245,255,${whiteFlash})`;ctx.fillRect(-20,-20,W+40,H+40)}   // chớp trắng khi sét đánh
+  if(flash>0){ctx.fillStyle=`rgba(255,80,40,${flash})`;fillView()}
+  if(whiteFlash>0){ctx.fillStyle=`rgba(235,245,255,${whiteFlash})`;fillView()}   // chớp trắng khi sét đánh
   ctx.restore();
   if(players.length&&state!=='intro')drawHud();
   if(state==='intro')drawIntro();
@@ -1451,9 +1498,11 @@ const sidePanel=(team,x,right)=>{
 };
 const drawHud=()=>{
   const p=cur();
-  sidePanel(0,10,false);
+  sidePanel(0,10-view.ox,false);
+  ctx.save();ctx.translate(-view.ox,0);
   if(vsAI()&&matchCoins>0){box(10,74,196,24,12,'rgba(34,18,40,.72)');dot(ctx,26,86,6,'#ffc21a');dot(ctx,26,86,3,'#fff3b0');ctx.font='700 14px "Baloo 2",sans-serif';ctx.fillStyle='#ffd84a';ctx.textAlign='left';ctx.fillText('+'+fmt(matchCoins)+' vàng trong trận',38,91)}
-  sidePanel(1,W-340,true);
+  ctx.restore();
+  sidePanel(1,W-340+view.ox,true);
   // huy hiệu VS và gió
   poly(ctx,[[W/2-34,10],[W/2+34,10],[W/2+34,40],[W/2,54],[W/2-34,40]],'#6a2bbf');
   poly(ctx,[[W/2-34,10],[W/2+34,10],[W/2+34,18],[W/2-34,18]],'#8c4fd8');
@@ -1464,7 +1513,7 @@ const drawHud=()=>{
   ctx.textAlign='center';ctx.font='700 13px "Baloo 2",sans-serif';ctx.fillStyle='rgba(255,255,255,.9)';
   ctx.fillText((mode==='endless'?'Vô tận · Đã hạ '+kills+' · ':'')+(mode==='ai'?'Màn '+(level+1)+(waveCount()>1?' · Giai đoạn '+(wave+1)+'/'+waveCount():'')+' · ':'')+theme.name,W/2,102);
   // thanh dưới
-  box(0,H-50,W,50,0,'rgba(34,18,40,.75)');
+  box(-view.ox,H-50,view.w,50,0,'rgba(34,18,40,.75)');
   ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='700 17px "Baloo 2",sans-serif';ctx.fillText('Góc '+Math.round(p.angle)+'°',16,H-18);
   const bx=118,bw=380;
   box(bx,H-36,bw,22,4,'#1b0f22');
@@ -1533,6 +1582,7 @@ const drawHeroTank=(T,x,dir,ang,recoil,hit,s)=>{
   ctx.translate(-dir*recoil*6,0);ctx.scale(dir*s,s);drawTankArt(ctx,T,ang,recoil,0);ctx.restore();
 };
 const drawHero=()=>{
+  ctx.setTransform(1,0,0,1,0,0);                                     // xoá phép dịch khung nhìn còn sót từ trận đấu
   const h=hero;
   ctx.save();if(shake>0)ctx.translate(rand(-6,6)*shake,rand(-6,6)*shake);
   ctx.drawImage(bgCanvas,0,0);drawAir();drawGround();for(const d of decor)drawDecor(d);
@@ -1563,7 +1613,7 @@ const INTRO_TIME=2.4;
 const drawIntro=()=>{
   const t=introT,ein=Math.min(1,t/.45),e=1-(1-ein)**3,out=t>INTRO_TIME-.35?(t-(INTRO_TIME-.35))/.35:0;
   ctx.save();ctx.globalAlpha=1-out;
-  ctx.fillStyle='rgba(20,8,26,.55)';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(20,8,26,.55)';fillView();
   const cy=H/2+10;
   const teams=[players.filter(p=>p.team===0),players.filter(p=>p.team===1)];
   for(let side=0;side<2;side++){
@@ -1623,7 +1673,7 @@ const updateWin=dt=>{
 const newConf=top=>({x:rand(0,W),y:top?rand(-H,0):-10,vy:rand(70,150),ph:rand(0,6),rot:rand(0,6),vr:rand(-8,8),w:rand(5,9),h:rand(8,14),col:CONF_COLS[Math.floor(Math.random()*CONF_COLS.length)]});
 const drawWin=()=>{
   const w=win,t=w.t,a=Math.min(1,t/.4);
-  ctx.fillStyle=`rgba(12,6,22,${(w.lose?.7:.55)*a})`;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=`rgba(12,6,22,${(w.lose?.7:.55)*a})`;fillView();
   const cy=H/2+40;
   if(!w.lose){                                                     // tia sáng xoay sau lưng xe thắng
     ctx.save();ctx.translate(W/2,cy-30);ctx.rotate(t*.35);
@@ -1880,7 +1930,7 @@ panel.addEventListener('click',e=>{
   else if(a==='start'||a==='retry')startMatch();
   else if(a==='next'){level++;startMatch()}
 });
-$('quitBtn').onclick=()=>showMenu();
+$('quitBtn').onclick=()=>{closeSheet();showMenu()};
 $('screen').addEventListener('pointerdown',()=>{if(state==='intro')startTurn();else skipWin()});
 // Toàn màn hình: thử API fullscreen thật của trình duyệt; nếu khung trang không cho phép thì phóng khung game phủ kín cửa sổ.
 const caseEl=document.querySelector('.case');
@@ -1901,7 +1951,7 @@ document.addEventListener('click',e=>{if(e.target.closest('.fsBtn'))toggleFs()})
 addEventListener('keydown',e=>{
   if(e.target.closest&&e.target.closest('input,textarea'))return;
   if(e.code==='KeyF'&&state!=='menu'||e.code==='KeyF'&&hero){e.preventDefault();toggleFs()}
-  else if(e.code==='Escape'&&fakeFs){fakeFs=false;fsLabel()}
+  else if(e.code==='Escape'&&fakeFs&&state==='menu'){fakeFs=false;fsLabel()}
 });
 const soundLabel=()=>{$('soundBtn').textContent='Âm thanh: '+(muted?'Tắt':'Bật')};soundLabel();
 $('soundBtn').onclick=()=>{muted=!muted;if(master)master.gain.value=muted?0:.6;soundLabel();try{localStorage.setItem('phaodai-mute',muted?'1':'0')}catch(e){}};
@@ -1917,8 +1967,16 @@ for(const b of document.querySelectorAll('.tb')){                   // nút sán
   for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>b.classList.remove('down'));
 }
 const screenEl=$('screen');
+let paused=false;
+const sheet=$('sheet'),gearBtn=$('gearBtn');
+const openSheet=()=>{paused=true;sheet.hidden=false;clearKeys();charging=false;power=0;setEngine(false);setCharge(null);fsLabel();$('resumeBtn').focus()};
+const closeSheet=()=>{paused=false;sheet.hidden=true};
+gearBtn.addEventListener('click',openSheet);
+$('resumeBtn').addEventListener('click',closeSheet);
 const updateTouchUi=()=>{
   const playing=!hero&&state!=='menu';if(screenEl.classList.contains('playing')!==playing)screenEl.classList.toggle('playing',playing);
+  if(gearBtn.hidden===playing)gearBtn.hidden=!playing;
+  if(!playing&&!sheet.hidden)closeSheet();
   const show=isTouch&&!hero&&state!=='menu'&&state!=='victory'&&state!=='intro';
   if(touchEl.hidden===show)touchEl.hidden=!show;
   if(show){const p=cur(),mine=p&&!p.isAI&&state==='aim';tSkill.classList.toggle('ready',!!(mine&&p.energy>=100&&!p.useSkill));tSkill.classList.toggle('on',!!(mine&&p.useSkill))}
@@ -1926,7 +1984,7 @@ const updateTouchUi=()=>{
 
 // ===== BƯỚC 19: VÒNG LẶP GAME =====
 let last=performance.now();
-const loop=t=>{const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);updateTouchUi();if(!$('screen').hidden){if(state==='menu'&&hero)drawHero();else draw()}requestAnimationFrame(loop)};
+const loop=t=>{const dt=Math.min(.033,(t-last)/1000);last=t;if(!paused)update(dt);updateTouchUi();fitView();if(!$('screen').hidden){if(state==='menu'&&hero)drawHero();else draw()}requestAnimationFrame(loop)};
 loadProfiles();showTitle();requestAnimationFrame(loop);
 }
 </script>
