@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tank War</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: game đối kháng vui nhộn, màu tươi, khối phẳng
+   IDEA: một chiếc máy chơi game vỏ gỗ, bên trong là sân khấu sa mạc / đồi / núi nhiều lớp
+   PICTURE: canvas: trời chuyển màu, núi đá bậc thang mờ phía xa, đất nhiều tầng màu, xương rồng
+   COLOUR and TYPE: vỏ nâu gỗ, vàng nắng làm điểm nhấn, mỗi xe một màu riêng; Baloo 2
+   LAYOUT: tiêu đề nhỏ, menu hoặc khung game ở giữa, nút điều khiển bên dưới */
+:root{color-scheme:light dark;--bg:light-dark(#fff4e6,#1a1020);--ink:light-dark(#2a1a10,#fbefe2);--case:#3a2418;--soft:light-dark(#7a5a44,#c9ab92)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Baloo 2",system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:1040px;margin:0 auto;padding:clamp(12px,3vw,28px) max(3vw,10px)}
+h1{font-size:clamp(28px,4.5vw,42px);line-height:1.05;margin:0 0 10px}
+.case{background:var(--case);border-radius:20px;padding:10px;box-shadow:0 16px 36px rgba(40,20,10,.35)}
+.screen{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000}
+.screen canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.panel{background:#2a1a12;color:#fbefe2;border-radius:12px;padding:clamp(16px,3vw,28px);min-height:360px}
+.panel[hidden],.screen[hidden],.pad[hidden]{display:none}
+.panel h2{font-size:clamp(28px,4vw,40px);line-height:1.05;margin:0 0 6px;color:#ffd84a}
+.panel h3{margin:18px 0 8px;font-size:18px}
+.panel p{margin:0;color:#d9c3ae;max-width:62ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:10px}
+.tk,.lv{display:grid;gap:2px;justify-items:start;align-content:start;text-align:left;background:#4a3022;color:#fbefe2;border:2px solid transparent;border-radius:14px;padding:10px 12px;font-size:17px;font-weight:700}
+.tkc{width:128px;height:72px}
+.rnd{display:grid;place-items:center;width:128px;height:72px;font-size:44px;font-weight:800;color:#ffd84a}
+.maps{grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr))}
+.sw{display:grid;place-items:center;width:100%;height:58px;border-radius:10px;font-size:30px;font-weight:800;color:#ffd84a;margin-bottom:4px}
+.tk small,.lv small{font-weight:500;color:#d9c3ae;font-size:14px;line-height:1.3}
+.tk.on{border-color:#ffd84a;background:#5a3a26}
+.tk.locked{background:#33221a}.tk.locked .tkc{filter:grayscale(1) brightness(.7)}.tk.locked b{color:#bba692}
+.coin{flex:none;display:inline-block;width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff3b0,#ffc21a 55%,#c98f00);box-shadow:inset 0 0 0 2px #e0a92a}
+.price{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-weight:800;font-size:14px;color:#d9c3ae;background:rgba(0,0,0,.28);padding:2px 10px;border-radius:999px}
+.price.ok{color:#ffd84a}
+.wallet{display:inline-flex;align-items:center;gap:8px;background:#4a3022;border-radius:999px;padding:4px 16px;font-size:18px;margin:8px 0 0}
+.wallet b{color:#ffd84a}
+.who{color:#fbefe2!important;margin-bottom:6px!important}.who b{color:#ffd84a}
+.link{background:none;border:0;padding:0;min-height:0;min-width:0;font:inherit;font-weight:700;color:#4fd1ff;text-decoration:underline;cursor:pointer}
+.nameform{display:grid;gap:8px;max-width:440px;margin-top:14px}
+.nameform label{font-weight:700}
+.nameform input{font:inherit;font-size:20px;font-weight:700;padding:10px 14px;border-radius:12px;border:2px solid #6a4a36;background:#1b0f14;color:#fff}
+.nameform input:focus{outline:none;border-color:#ffd84a}
+.plist{display:grid;gap:10px;margin-top:12px}
+.pcard{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px;padding:12px 14px;background:#3a261b;border-radius:14px;border:2px solid transparent}
+.pcard.on{border-color:#ffd84a}.pcard b{font-size:19px;display:block}.pcard small{color:#d9c3ae}.pcard .row{margin-top:0}
+.danger{color:#ff9a8a!important;border-color:rgba(255,120,100,.5)!important}
+.upg{display:grid;gap:8px;margin-top:12px;padding:14px 16px;background:#3a261b;border-radius:14px;max-width:560px}
+.upg-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px}.upg-top small{color:#d9c3ae}
+.hpv{color:#5ce05c}
+.hpbar{position:relative;height:14px;border-radius:7px;background:#1b0f22;overflow:hidden}
+.hpbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#4fd16a,#9cf06a);border-radius:7px}
+.hpbar s{position:absolute;top:0;bottom:0;width:2px;background:rgba(0,0,0,.35)}
+.upg button{justify-self:start}.upg button:disabled{opacity:.6;cursor:default}
+.note{min-height:1.5em;margin:6px 0 0!important;color:#ffd84a!important;font-weight:700}
+.reward{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px!important;font-size:17px;color:#fbefe2!important}.reward b{color:#ffd84a}
+.lv:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.home{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:end;justify-content:space-between}
+.home .row{margin-top:0}
+.panel:has(.home){min-height:0}
+/* Chế độ toàn màn hình: khung game giữ tỉ lệ 16:9 và to hết mức vừa màn hình */
+.case.fs{position:fixed;inset:0;z-index:100;border-radius:0;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:8px;overflow:auto;padding:8px;background:#1a0f0a}
+.case.fs .screen{width:min(100%,calc((100dvh - 92px)*16/9));flex:none}
+.case.fs .screen+.panel,.case.fs .panel{width:min(100%,1100px);margin-top:0;flex:none;min-height:0}
+.case.fs .screen:has(+.panel:not([hidden])){width:min(100%,calc((100dvh - 190px)*16/9))}   /* ở menu chính: thu nhỏ cảnh để vừa chỗ cho nút */
+.case.fs .home h2{font-size:28px}
+.case.fs .pad{padding-top:0}
+.case.fs:fullscreen{background:#1a0f0a}
+@media(max-width:700px){.case.fs .screen{width:min(100%,calc((100dvh - 150px)*16/9))}}
+.case>.screen+.panel,.case>.panel+.screen{margin-top:10px}
+.pad{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding-top:10px}
+.pad button{font-size:16px;padding:4px 13px}
+/* ---- Điều khiển cảm ứng ---- */
+.screen,.pad{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;touch-action:none}
+.touch[hidden]{display:none}
+.touch{position:absolute;inset:0;pointer-events:none}
+.tpad,.tact{position:absolute;bottom:calc(9.3% + 8px);pointer-events:auto}
+.tpad{left:2%;display:flex;gap:10px}
+.tang{display:grid;gap:6px}
+.touch{--tb:clamp(38px,7.5%,62px)}
+.tb{width:var(--tb);height:var(--tb);min-width:0;min-height:0;padding:0;border-radius:50%;background:rgba(20,10,30,.42);color:#fff;font-size:clamp(14px,2.4vw,22px);border:2px solid rgba(255,255,255,.35);backdrop-filter:blur(2px)}
+.tb:active,.tb.down{background:rgba(255,216,74,.55);color:#2a1030}
+.tact{right:2%;display:flex;align-items:flex-end;gap:10px}
+.fireb{--s:calc(var(--tb)*1.75);width:var(--s);height:var(--s);background:rgba(255,90,54,.75);border-color:rgba(255,255,255,.6);font-size:clamp(16px,3vw,26px);display:grid;place-content:center;line-height:1.05}
+.fireb small{font-size:.45em;font-weight:700;opacity:.85}
+.sk{font-size:clamp(10px,1.6vw,14px);line-height:1.1;opacity:.55}
+.sk.ready{opacity:1;background:rgba(255,216,74,.8);color:#2a1030;box-shadow:0 0 16px #ffd84a;animation:pulse 1s infinite}
+.sk.on{background:#ffd84a;color:#2a1030;box-shadow:0 0 22px #fff}
+@keyframes pulse{50%{transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.sk.ready{animation:none}}
+.touchdev .pad [data-k]{display:none}               /* điện thoại: nút điều khiển nằm trên màn hình game, thanh dưới chỉ còn Âm thanh / Toàn màn hình / Menu */
+.rotate{display:none;margin:0 0 8px;padding:8px 12px;border-radius:10px;background:#ffd84a;color:#2a1030;font-weight:800;text-align:center}
+@media (pointer:coarse) and (orientation:portrait){.rotate{display:block}}
+.touchdev .case.fs .screen{width:min(100%,calc((100dvh - 62px)*16/9))}
+.touchdev .case.fs .pad button{font-size:13px;min-height:38px;padding:2px 12px}
+button{font:inherit;font-weight:800;font-size:18px;min-height:48px;min-width:56px;padding:4px 18px;border:0;border-radius:14px;background:#f3e2cc;color:#3a2418;cursor:pointer;touch-action:none;user-select:none}
+button:focus-visible{outline:3px solid #ffd84a;outline-offset:2px}
+.fire{background:#ff5a36;color:#fff;min-width:140px}
+.skill{background:#ffd84a}
+.main{background:#ffd84a;color:#3a2418;font-size:20px;padding:6px 28px}
+.alt{background:#4fd1ff}
+.end{background:#ff7a4a;color:#fff}
+.ghost{background:transparent;color:#fbefe2;border:2px solid rgba(255,255,255,.3)}
+.help{color:var(--soft);margin-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tank War</h1>
+  <div class="case">
+    <p class="rotate">Xoay ngang điện thoại để chơi thoải mái hơn</p>
+    <div class="screen" id="screen" hidden><canvas id="cv" width="960" height="540"></canvas>
+      <!-- Nút cảm ứng (chỉ hiện trên điện thoại / máy tính bảng) -->
+      <div class="touch" id="touch" hidden>
+        <div class="tpad">
+          <button class="tb lf" data-k="left" type="button" aria-label="Đi trái">◀</button>
+          <button class="tb rt" data-k="right" type="button" aria-label="Đi phải">▶</button>
+        </div>
+        <div class="tact">
+          <div class="tang"><button class="tb up" data-k="up" type="button" aria-label="Tăng góc">▲</button><button class="tb dn" data-k="down" type="button" aria-label="Giảm góc">▼</button></div>
+          <button class="tb sk" id="tSkill" data-k="skill" type="button">KỸ<br>NĂNG</button>
+          <button class="tb fireb" data-k="fire" type="button">BẮN<small>giữ để nạp</small></button>
+        </div>
+      </div>
+    </div>
+    <div class="panel" id="menu"></div>
+    <div class="pad" id="pad" hidden>
+      <button data-k="left" type="button" aria-label="Đi trái">◀ A</button>
+      <button data-k="right" type="button" aria-label="Đi phải">D ▶</button>
+      <button data-k="up" type="button" aria-label="Tăng góc">W Góc +</button>
+      <button data-k="down" type="button" aria-label="Giảm góc">S Góc −</button>
+      <button class="skill" data-k="skill" type="button">E Kỹ năng</button>
+      <button class="fire" data-k="fire" type="button">Giữ để bắn</button>
+      <button class="ghost" id="soundBtn" type="button">Âm thanh: Bật</button>
+      <button class="ghost fsBtn" type="button">Toàn màn hình</button>
+      <button class="ghost" id="quitBtn" type="button">Menu</button>
+    </div>
+  </div>
+  <p class="help"><b>Điện thoại:</b> dùng nút ◀ ▶ để đi, ▲ ▼ chỉnh góc, giữ nút BẮN để nạp lực rồi thả ra, nút KỸ NĂNG sáng lên khi đầy năng lượng. <b>Máy tính:</b> <b>A / D</b> di chuyển (tốn xăng) · <b>W / S</b> chỉnh góc · <b>giữ Space</b> nạp lực, <b>thả ra</b> để bắn · Luồng khí trắng trên bản đồ cho biết hướng và độ mạnh của gió · <b>F</b> bật/tắt toàn màn hình · <b>E</b> bật kỹ năng khi thanh năng lượng (màu vàng) đầy 100%. Mỗi phát bắn +10% năng lượng; bắn trúng đối thủ hoặc bị trúng đạn được cộng thêm theo sát thương. Hòm tiếp tế thả dù ngẫu nhiên: lái xe chạm vào hoặc bắn nổ gần hòm để nhận <b style="color:#2f9e4a">hồi máu</b>, <b style="color:#2f7fd6">khiên</b>, <b style="color:#b88a00">năng lượng đầy</b> hoặc <b style="color:#1aa7a7">tăng tốc</b>; khi đánh với máy còn có <b style="color:#b88a00">hòm vàng</b> để kiếm tiền mua xe mới.</p>
+</div>
+<script>
+{
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+const rand=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+// ===== BƯỚC 1: HẰNG SỐ =====
+const W=960,H=540;
+const GRAVITY=400,MAX_SPEED=820,WIND_FORCE=8;
+const MIN_ANGLE=-20;          // nòng chúc xuống tối đa 20°
+const DIG_SCALE=0.45;        // độ mềm của đất: hố chỉ rộng 45% bán kính vụ nổ (số càng nhỏ đất càng cứng)
+const ENERGY_PER_SHOT=10;     // mỗi phát bắn thường +10% năng lượng
+const ENERGY_PER_TAKEN=0.8;   // BỊ TRÚNG 10 sát thương = +8% năng lượng: càng bị đánh đau, kỹ năng càng mau đầy
+const ENERGY_PER_DMG=0.6;     // BẮN TRÚNG: gây 10 sát thương cho đối thủ = +6% năng lượng (cộng thêm vào 10% của phát bắn)
+const PLAYER_HP=200;          // máu của cả 2 xe trong chế độ 2 người (đánh máy thì dùng máu đã nâng cấp, xem bước 6.2)
+const PIV={x:2,y:24},BARREL=28,HIT_R=20,BODY_Y=14;   // tâm xoay nòng, độ dài nòng, bán kính trúng, tâm thân xe
+
+// ===== BƯỚC 2: CÁC LOẠI XE TĂNG =====
+// pal = 3 tông màu [sáng, chính, tối]. hull = kiểu thân xe (a, b, c, d).
+const TANKS={
+  rapid   :{name:'Cuồng Phong',pal:['#ffc46b','#ff8a1f','#c4560a'],hp:100,hull:'a',skillName:'Bão Đạn Liên Hoàn',desc:'Xả liền 5 viên nối đuôi trên cùng một đường bay'},
+  spread  :{name:'Mãng Xà',   pal:['#d4f77a','#8fd136','#4f8a17'],hp:100,hull:'b',skillName:'Ngũ Long Tán Xạ',desc:'Bắn toả 5 viên hình quạt, mỗi viên lệch 1,5°'},
+  twin    :{name:'Song Kiếm', pal:['#ffb3df','#ff4fae','#b81f73'],hp:115,hull:'c',skillName:'Song Long Xuất Kích',desc:'2 viên đạn to bay song song cùng lúc'},
+  laser   :{name:'Quang Kiếm', pal:['#c4f8ff','#3cd6f2','#1586a8'],hp:90, hull:'d',skillName:'Quang Tiễn Xuyên Sơn',desc:'Tia laze bắn thẳng theo nòng, xuyên địa hình, không bị gió'},
+  flame   :{name:'Hoả Thần',  pal:['#ffb199','#ff4d3d','#b3261c'],hp:105,hull:'b',skillName:'Hoả Ngục Bùng Cháy',desc:'Ném thùng chất nổ, để lại vùng lửa: ai đứng trong đó mất máu mỗi lượt'},
+  poison  :{name:'Tử Độc',    pal:['#d7b4ff','#8c4fd8','#4e2590'],hp:100,hull:'a',skillName:'Độc Vụ Tử Thần',desc:'Đạn khí độc tạo vùng độc: mất máu mỗi lượt và bị đi chậm'},
+  mega    :{name:'Bạo Chúa',  pal:['#a9c4ff','#4a78e0','#24418f'],hp:120,hull:'c',skillName:'Thiên Thạch Huỷ Diệt',desc:'Tên lửa hạng nặng, vụ nổ cực lớn, sát thương rất mạnh'},
+  electric:{name:'Lôi Thần',  pal:['#fff3a0','#ffd21f','#c98f00'],hp:95, hull:'a',skillName:'Thiên Lôi Trừng Phạt',desc:'Bắn cột thu lôi: cắm vào xe địch hoặc mặt đất, rồi sét đánh thẳng xuống chỗ đó, sát thương rất mạnh'},
+  tech    :{name:'Thiên Nhãn', pal:['#ffffff','#d6deeb','#8391ab'],hp:95, hull:'d',skillName:'Không Kích UAV',desc:'UAV bay theo hướng xe, lực = quãng đường, thả tên lửa thẳng xuống'},
+  cluster :{name:'Địa Chấn',  pal:['#e3eaa8','#8f9e45','#525c22'],hp:100,hull:'a',skillName:'Thiên La Địa Võng',desc:'Bắn quả bom lớn: chạm đất hoặc trúng địch thì nổ, bung ra 7 quả bom con sát thương cao, phá đất cực mạnh'},
+  ice     :{name:'Băng Vương', pal:['#f2fdff','#a6e3f7','#4f93c4'],hp:100,hull:'b',skillName:'Tuyệt Đối Không Độ',desc:'Bắn đạn băng: trúng đối thủ thì đóng băng, khiến đối thủ mất lượt kế tiếp'},
+  seeker  :{name:'Liệp Ưng',  pal:['#9aa3d6','#454d82','#262b52'],hp:100,hull:'c',skillName:'Đại Bàng Săn Mồi',desc:'Bay theo đường bắn; thấy xe địch mà không bị đất chắn thì tự khoá và lao thẳng vào, sát thương mạnh'}
+};
+for(const k in TANKS){TANKS[k].skill=k;TANKS[k].color=TANKS[k].pal[1]}
+TANKS.seeker.color='#9aa6ff';TANKS.cluster.color='#c6d46a';   // màu chữ sáng hơn màu thân xe để đọc được trên nền tối
+
+// ===== BƯỚC 3: CÁC LOẠI ĐẠN VÀ VÙNG HIỆU ỨNG =====
+// r = bán kính nổ, dmg = sát thương tối đa, zone = để lại vùng hiệu ứng, stun = gây tê liệt, noWind = không bị gió
+const SHELL={
+  normal :{r:40,dmg:30},
+  rapid  :{r:24,dmg:14}, spread:{r:26,dmg:15}, twin:{r:34,dmg:28},
+  barrel :{r:34,dmg:22,zone:'fire'},
+  poison :{r:30,dmg:16,zone:'poison'},
+  missile:{r:72,dmg:68},
+  eball  :{r:38,dmg:36,stun:true},
+  rod    :{r:46,dmg:62},                  // sét đánh xuống cột thu lôi (bán kính và sát thương của cú sét)
+  uavm   :{r:40,dmg:48,noWind:true},
+  seeker :{r:36,dmg:56},
+  ice    :{r:34,dmg:30,freeze:true},
+  cluster:{r:42,dmg:40,split:7,dig:34},   // split = số bom con bung ra khi nổ
+  bomblet:{r:26,dmg:18,dig:46}           // dig = bán kính hố riêng: bom con khoét hố cực lớn so với cỡ vụ nổ
+};
+const LASER_DMG=36;
+// Đạn truy kích: tầm phát hiện, tốc độ quay đầu tối đa (radian/giây), tốc độ khi đã khoá mục tiêu
+const SEEK_RANGE=300,SEEK_TURN=7,SEEK_SPEED=720;
+// Vùng hiệu ứng: r = nửa bề rộng, dmg = sát thương đầu mỗi lượt của xe đứng trong vùng, slow = làm đi chậm
+const ZONES={fire:{r:70,dmg:10,life:4,slow:false},poison:{r:80,dmg:7,life:4,slow:true}};   // life = số VÒNG tồn tại (mỗi bên 4 lượt)
+
+// ===== BƯỚC 4: ĐỊA HÌNH VÀ PHONG CẢNH =====
+// bg = kiểu núi nền (mesa: núi đá đỉnh bằng, peak: núi nhọn, hill: đồi tròn)
+// layers = màu các tầng đất từ trên xuống, decor = đồ trang trí trên mặt đất
+const THEMES={
+  hills  :{name:'Đồi Cỏ Xanh',sky:['#8fd3ff','#fff1c9'],bg:'hill',far:'#b5dcc4',near:'#8cc79c',
+           layers:['#8fe06a','#5fb84a','#9a6a42','#835634','#6a4228'],decor:['tuft','tree','tuft','rock'],
+           gen:(x,s)=>H*.62+Math.sin(x/140+s[0])*55+Math.sin(x/61+s[1])*22+Math.sin(x/23+s[2])*6},
+  desert :{name:'Sa Mạc Cát',sky:['#ffae6b','#ffe6b8'],bg:'mesa',far:'#f4c099',near:'#e39566',
+           layers:['#f8c873','#eba352','#dc8640','#c86c32','#ac5427'],decor:['cactus','rock','tuft','cactus'],
+           gen:(x,s)=>H*.66+Math.sin(x/95+s[0])*32+Math.sin(x/41+s[1])*12+Math.sin(x/17+s[2])*3},
+  canyon :{name:'Hẻm Núi Đỏ',sky:['#ff9a6b','#ffdcae'],bg:'mesa',far:'#eaa27e',near:'#cc6d4b',
+           layers:['#ee8c54','#d46e3f','#bb5631','#9f4427','#80341f'],decor:['rock','cactus','tuft'],
+           gen:(x,s)=>{const c=1/(1+Math.exp(-(Math.abs(x-480)-130)/18));return H*.9-c*H*.38+Math.sin(x/33+s[0])*8}},
+  snow   :{name:'Núi Tuyết',sky:['#a3c3f7','#f1f5ff'],bg:'peak',far:'#c9d6f0',near:'#9fb1d6',snowcap:true,
+           layers:['#ffffff','#dfe8f7','#8e9cbe','#76839f','#5d6883'],decor:['pine','pine','rock'],
+           gen:(x,s)=>H*.74-250*Math.exp(-(((x-480)/150)**2))+Math.sin(x/47+s[0])*10+Math.sin(x/19+s[1])*4},
+  islands:{name:'Quần Đảo',sky:['#62c0ff','#e6f7ff'],bg:'hill',far:'#8fd0b8',near:'#73bfa8',water:true,
+           layers:['#7ee06b','#ecd493','#d2b16d','#b58f53','#96733f'],decor:['palm','tuft','palm'],
+           gen:(x,s)=>((x>290&&x<380)||(x>580&&x<670))?H+60:H*.6+Math.sin(x/70+s[0])*25+Math.sin(x/29+s[1])*8},
+  jungle :{name:'Rừng Nhiệt Đới',sky:['#9fe3c0','#f4ffd8'],bg:'hill',far:'#7cc79a',near:'#4fa46f',
+           layers:['#6ad35a','#3f9a48','#7a5236','#64422c','#4e3322'],decor:['tree','palm','tuft','tree'],
+           gen:(x,s)=>H*.64+Math.sin(x/80+s[0])*40+Math.sin(x/33+s[1])*14+Math.sin(x/13+s[2])*3},
+  night  :{name:'Sa Mạc Đêm',sky:['#1b2350','#7a64a8'],bg:'mesa',far:'#4a4a7a',near:'#363866',moon:true,
+           layers:['#d8b478','#b38c55','#93703f','#755533','#5a4027'],decor:['cactus','rock','cactus'],
+           gen:(x,s)=>H*.68+Math.sin(x/160+s[0])*50+Math.sin(x/50+s[1])*10},
+  plateau:{name:'Cao Nguyên Đá',sky:['#ffcf8a','#fff1d6'],bg:'mesa',far:'#d9b08a',near:'#b8865e',
+           layers:['#e8b072','#cf9257','#b17443','#925b35','#714328'],decor:['rock','tuft','cactus'],
+           gen:(x,s)=>{const k=(Math.sin(x/150+s[0])+1)*1.5,f=Math.floor(k),t=k-f,st=f+(t>.75?(t-.75)/.25:0);return H*.8-55*st+Math.sin(x/23+s[1])*3}},
+  volcano:{name:'Miệng Núi Lửa',sky:['#2b1230','#d9592e'],bg:'peak',far:'#5f2c3c',near:'#40202c',lava:true,
+           layers:['#ff7a2f','#5f4545','#4c3737','#3b2a2a','#2b1d1d'],decor:['rock','rock'],
+           gen:(x,s)=>{const d=Math.abs(x-480);return H*.72-220*Math.exp(-((d/170)**2))+120*Math.exp(-((d/45)**2))+Math.sin(x/11+s[0])*7+Math.sin(x/29+s[1])*9}}
+};
+
+// ===== BƯỚC 5: CÁC MÀN CHƠI VỚI MÁY =====
+// err = [sai số góc, sai số lực]; skillRate = xác suất máy dùng kỹ năng khi năng lượng đầy
+// enemies = danh sách xe địch [loại xe, máu]. Màn nhiều giai đoạn dùng waves = [đợt 1, đợt 2]. Xe người chơi luôn có PLAYER_HP = 200.
+const ENEMY_X=[W-140,W-270,W-400];           // vị trí đứng của xe địch
+const MAX_ENEMY_HP=350;                      // tổng máu xe địch trong 1 đợt không vượt quá 350
+// Nếu ai đó sửa bảng LEVELS mà tổng máu vượt 350, máu từng xe sẽ tự thu nhỏ theo tỉ lệ cho vừa
+const enemyHp=list=>{const sum=list.reduce((a,[,hp])=>a+hp,0),k=Math.min(1,MAX_ENEMY_HP/sum);return list.map(([,hp])=>Math.floor(hp*k))};   // giới hạn 350 tính cho từng đợt
+const LEVELS=[
+  {theme:'hills',  diff:'Dễ',     wind:3, err:[9,14], skillRate:.5, enemies:[['rapid',90]]},
+  {theme:'desert', diff:'Dễ',     wind:4, err:[8,12], skillRate:.6, enemies:[['flame',100]]},
+  {theme:'jungle', diff:'Dễ',     wind:4, err:[9,13], skillRate:.5, enemies:[['rapid',90],['spread',90]]},
+  {theme:'canyon', diff:'Vừa',    wind:6, err:[5,7],  skillRate:.7, enemies:[['poison',120]]},
+  {theme:'night',  diff:'Vừa',    wind:6, err:[6,8],  skillRate:.7, enemies:[['electric',100],['twin',110]]},
+  {theme:'snow',   diff:'Vừa',    wind:8, err:[4,5],  skillRate:.8, enemies:[['ice',140]]},
+  {theme:'plateau',diff:'Khó',    wind:7, err:[5,7],  skillRate:.8, enemies:[['flame',100],['poison',100],['cluster',100]]},
+  {theme:'islands',diff:'Khó',    wind:9, err:[3,4],  skillRate:.9, enemies:[['tech',130],['seeker',120]]},
+  {theme:'volcano',diff:'Rất khó',wind:10,err:[2,3],  skillRate:1,  enemies:[['mega',140],['electric',105],['tech',105]]},
+  // --- các màn mới: có màn 2 giai đoạn ---
+  {theme:'desert', diff:'Khó',    wind:7, err:[4,5],  skillRate:.8, waves:[[['rapid',110],['spread',110]],[['mega',150]]]},
+  {theme:'snow',   diff:'Khó',    wind:9, err:[3,4],  skillRate:.9, enemies:[['ice',120],['electric',115],['laser',115]]},
+  {theme:'jungle', diff:'Rất khó',wind:8, err:[3,4],  skillRate:.9, waves:[[['poison',110],['flame',110]],[['cluster',130],['seeker',120]]]},
+  {theme:'night',  diff:'Rất khó',wind:9, err:[2.5,3],skillRate:1,  waves:[[['tech',120],['twin',120],['rapid',110]],[['mega',140],['ice',105],['seeker',105]]]},
+  {theme:'canyon', diff:'Trùm',   wind:8, err:[2,2.5],skillRate:1,  boss:true, enemies:[['mega',350]]},
+  {theme:'volcano',diff:'Địa ngục',wind:10,err:[1.5,2],skillRate:1, waves:[[['cluster',120],['electric',115],['flame',115]],[['seeker',120],['ice',115],['mega',115]]]}
+];
+for(const L of LEVELS){L.waves=L.waves||[L.enemies];L.enemies=L.waves[0]}   // màn 1 giai đoạn = 1 đợt
+
+// ===== BƯỚC 6: TRẠNG THÁI GAME =====
+let ground=new Float32Array(W),theme=THEMES.desert,decor=[];
+const bgCanvas=document.createElement('canvas');bgCanvas.width=W;bgCanvas.height=H;   // nền vẽ sẵn 1 lần mỗi trận
+let mode='ai',level=0,unlocked=1,pickP1='rapid',pickP2='flame',pvpMap='random';   // 'random' = bốc thăm khi vào trận
+
+// ===== BƯỚC 6.2: VÀNG, CỬA HÀNG XE =====
+// Lần đầu chơi được chọn 1 xe miễn phí. Các xe khác mua bằng vàng: thắng màn đánh máy và nhặt hòm vàng trên bản đồ.
+// Tất cả được lưu theo từng hồ sơ người chơi trong trình duyệt (xem bước 18.5).
+const CAR_PRICE=500;   // giá mọi xe: 500 vàng
+const PRICES=Object.fromEntries(Object.keys(TANKS).map(k=>[k,CAR_PRICE]));
+let coins=0,owned=[],cleared=[],matchCoins=0,paid=true,hpLv=0;
+// Nâng cấp máu: bắt đầu 100 máu, mỗi cấp +25, tối đa 12 cấp = 400 máu. Cấp càng cao càng đắt.
+const HP_BASE=100,HP_STEP=25,HP_MAX=400,HP_LEVELS=(HP_MAX-HP_BASE)/HP_STEP;
+const playerHp=()=>HP_BASE+HP_STEP*hpLv;
+const hpCost=lv=>80+30*lv;                       // cấp 1: 80 vàng, cấp 2: 110 ... cấp 12: 410 vàng (tổng 2.940 vàng)
+// Lưu vào hồ sơ người chơi đang chơi (xem bước 18.5)
+const saveProgress=()=>{const pr=curProfile();if(!pr)return;pr.data={coins,owned,cleared,hpLv,unlocked,bestKills};pr.last=Date.now();saveProfiles()};
+// Thưởng thắng màn: màn càng về sau càng nhiều; màn nhiều giai đoạn và màn trùm x1,5. Thắng lại màn đã qua chỉ nhận 50%.
+const levelReward=i=>Math.round((100+40*i)*(LEVELS[i].waves.length>1?1.5:1)*(LEVELS[i].boss?1.5:1)/10)*10;
+const fmt=n=>Math.round(n).toLocaleString('vi-VN');
+const fixPicks=()=>{
+  if(pickP1!=='random'&&!owned.includes(pickP1)||pickP1==='random'&&owned.length<2)pickP1=owned[0];
+  if(pickP2!=='random'&&!owned.includes(pickP2)||pickP2==='random'&&owned.length<2)pickP2=owned[1]||owned[0];
+};
+let lastIdx=[0,0];   // lượt gần nhất của từng phe, để luân phiên các xe trong cùng phe
+let players=[],turn=0,wind=0,power=0,charging=false,state='menu',msgT=0,shake=0,flash=0,waitT=0;
+let shells=[],queue=[],blasts=[],lasers=[],texts=[],zones=[],drones=[],smoke=[],ai=null;
+const keys={};
+const clearKeys=()=>{for(const k in keys)keys[k]=false};
+let fireLatch=false;   // bắn tự động khi lực đầy mà vẫn đang giữ Space: phải nhả ra mới nạp lực lại được
+const cur=()=>players[turn];
+
+// ===== BƯỚC 6.5: ÂM THANH (tự tạo bằng Web Audio, không cần file âm thanh) =====
+// Trình duyệt chỉ cho phát tiếng sau khi người chơi bấm hoặc gõ phím, nên AudioContext được tạo ở lần bấm đầu tiên.
+let actx=null,master=null,noiseBuf=null,engine=null,engineOn=false,chargeOsc=null,muted=false;
+try{muted=localStorage.getItem('phaodai-mute')==='1'}catch(e){}
+const ensureAudio=()=>{
+  if(actx){if(actx.state==='suspended')actx.resume();return}
+  try{actx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){return}
+  noiseBuf=actx.createBuffer(1,actx.sampleRate*1.5,actx.sampleRate);              // tiếng ồn trắng: nền cho tiếng nổ
+  const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  master=actx.createGain();master.gain.value=muted?0:.6;master.connect(actx.destination);
+  const o=actx.createOscillator(),f=actx.createBiquadFilter(),g=actx.createGain();   // tiếng động cơ xe
+  o.type='sawtooth';o.frequency.value=48;f.type='lowpass';f.frequency.value=260;g.gain.value=0;
+  o.connect(f);f.connect(g);g.connect(master);o.start();engine={o,g};
+};
+addEventListener('pointerdown',ensureAudio);addEventListener('keydown',ensureAudio);
+// tone: 1 nốt trượt tần số f0 → f1; noise: tiếng ồn qua bộ lọc (tạo tiếng nổ, tiếng xì)
+const tone=(type,f0,f1,dur,vol,delay=0)=>{
+  if(!actx)return;const t=actx.currentTime+delay,o=actx.createOscillator(),g=actx.createGain();
+  o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(Math.max(1,f1),t+dur);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.05);
+};
+const noise=(dur,vol,freq,type='lowpass',q=1,delay=0)=>{
+  if(!actx)return;const t=actx.currentTime+delay,s=actx.createBufferSource(),f=actx.createBiquadFilter(),g=actx.createGain();
+  s.buffer=noiseBuf;f.type=type;f.frequency.setValueAtTime(freq,t);f.frequency.exponentialRampToValueAtTime(Math.max(40,freq*.25),t+dur);f.Q.value=q;
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  s.connect(f);f.connect(g);g.connect(master);s.start(t);s.stop(t+dur+.05);
+};
+const sfx={
+  shoot:k=>{
+    if(k==='laser'){tone('sawtooth',1800,180,.5,.16);tone('sine',700,1500,.45,.12)}
+    else if(k==='rod'){tone('square',320,140,.12,.12);noise(.15,.3,2500,'bandpass',3)}
+    else if(k==='eball'){tone('square',200,900,.3,.08);noise(.35,.25,3500,'bandpass',4)}
+    else if(k==='drone'){tone('sawtooth',140,330,.7,.07);noise(.5,.15,1400,'bandpass',2)}
+    else if(k==='ice'){tone('sine',1300,300,.35,.2);noise(.3,.25,5000,'highpass')}
+    else if(k==='seeker'){tone('sine',200,60,.25,.5);noise(.3,.35,1500);tone('square',1300,1300,.05,.05,.05)}
+    else if(k==='missile'){tone('sine',150,40,.45,.55);noise(.9,.4,1000)}
+    else if(k==='barrel'||k==='poison'){tone('sine',260,90,.2,.4);noise(.2,.3,900)}
+    else{tone('sine',190,50,.2,.55);noise(.18,.45,1800)}
+  },
+  boom:(size=1)=>{noise(.45+.5*size,.75*Math.min(1.4,size),600+300*size);tone('sine',95,28,.35+.35*size,.6)},
+  whistle:()=>tone('sine',1400,500,.7,.06),
+  hit:()=>tone('triangle',440,140,.16,.25),
+  lock:()=>{tone('square',1500,1500,.06,.07);tone('square',1500,1500,.06,.07,.1);tone('square',2000,2000,.1,.07,.2)},
+  coin:()=>{[1320,1760,2093].forEach((f,i)=>tone('square',f,f,.09,.05,i*.06))},
+  pickup:()=>{tone('sine',520,520,.08,.2);tone('sine',660,660,.08,.2,.07);tone('sine',880,880,.16,.2,.14)},
+  drop:()=>{tone('sine',900,300,.6,.05)},
+  skill:()=>{noise(.5,.3,2500,'bandpass',2);tone('sawtooth',220,880,.35,.08);tone('sine',660,660,.3,.15,.15);tone('sine',990,990,.4,.15,.22)},
+  freeze:()=>{noise(.6,.3,6000,'highpass',1);tone('sine',1800,600,.5,.08);tone('triangle',1200,1200,.08,.08,.15)},
+  fanfare:()=>{[[523,0],[659,.14],[784,.28],[1046,.42],[784,.62],[1046,.76]].forEach(([f,d],i)=>{tone('square',f,f,i>4?.6:.16,.07,d);tone('triangle',f/2,f/2,i>4?.6:.16,.12,d)})},
+  defeat:()=>{[[392,0],[330,.3],[262,.6]].forEach(([f,d])=>tone('triangle',f,f*.97,.4,.16,d));tone('sine',130,90,1.2,.18,.9)},
+  shatter:()=>{noise(.35,.4,5000,'highpass',1);tone('triangle',2400,900,.2,.08)},
+  clang:()=>{tone('triangle',1400,1100,.25,.15);tone('square',2200,2200,.04,.05)},
+  thunder:()=>{noise(.25,.7,5000,'highpass');noise(1.8,.9,900);tone('sine',70,28,1.4,.55)},
+  zap:()=>{tone('square',900,120,.25,.1);tone('square',600,80,.2,.08,.08)},
+  ready:()=>{tone('sine',660,660,.12,.18);tone('sine',990,990,.2,.18,.1)},
+  click:()=>tone('sine',540,540,.05,.08)
+};
+const setEngine=on=>{if(!engine||on===engineOn)return;engineOn=on;engine.g.gain.setTargetAtTime(on?.07:0,actx.currentTime,.06)};
+const setCharge=pw=>{                       // tiếng "ù" cao dần khi đang giữ Space nạp lực
+  if(!actx)return;
+  if(pw==null){if(chargeOsc){chargeOsc.g.gain.setTargetAtTime(0,actx.currentTime,.03);chargeOsc.o.stop(actx.currentTime+.3);chargeOsc=null}return}
+  if(!chargeOsc){const o=actx.createOscillator(),g=actx.createGain();o.type='triangle';g.gain.value=.045;o.connect(g);g.connect(master);o.start();chargeOsc={o,g}}
+  chargeOsc.o.frequency.setTargetAtTime(180+pw*6,actx.currentTime,.02);
+};
+
+// ===== BƯỚC 7: TẠO ĐỊA HÌNH VÀ VẼ NỀN =====
+const makeTerrain=key=>{
+  theme=THEMES[key];
+  const s=[rand(0,6),rand(0,6),rand(0,6)];
+  for(let x=0;x<W;x++)ground[x]=Math.min(H+60,theme.gen(x,s));
+  paintBackground();
+  decor=[];
+  for(let i=0;i<16;i++){
+    const x=rand(20,W-20);
+    if([140,...ENEMY_X].some(sx=>Math.abs(x-sx)<45)||ground[Math.round(x)]>H)continue;
+    decor.push({x,type:theme.decor[i%theme.decor.length],s:rand(.7,1.25),flip:Math.random()<.5?-1:1});
+  }
+};
+const groundAt=x=>{const i=Math.round(x);return i<0||i>=W?H+60:ground[i]};
+const dig=(cx,cy,r)=>{
+  for(let x=Math.max(0,Math.floor(cx-r));x<Math.min(W,Math.ceil(cx+r));x++){
+    const dy=Math.sqrt(Math.max(0,r*r-(x-cx)**2));
+    if(ground[x]<cy+dy)ground[x]=Math.min(H+60,cy+dy);
+  }
+  decor=decor.filter(d=>Math.abs(d.x-cx)>r*.8);
+};
+// Một khối núi nền: mặt sáng bên trái, mặt tối bên phải, giống phong cách tranh phẳng
+const bgShape=(g,type,x,w,h,base,col)=>{
+  g.fillStyle=col;g.beginPath();
+  if(type==='mesa'){g.moveTo(x,base);g.lineTo(x+w*.1,base-h*.6);g.lineTo(x+w*.16,base-h*.64);g.lineTo(x+w*.2,base-h);g.lineTo(x+w*.78,base-h);g.lineTo(x+w*.84,base-h*.72);g.lineTo(x+w*.9,base-h*.7);g.lineTo(x+w,base)}
+  else if(type==='peak'){g.moveTo(x,base);g.lineTo(x+w*.45,base-h);g.lineTo(x+w*.55,base-h*.92);g.lineTo(x+w,base)}
+  else{g.moveTo(x,base);g.quadraticCurveTo(x+w/2,base-h*2,x+w,base)}
+  g.closePath();g.fill();
+  g.fillStyle='rgba(60,20,20,.14)';g.beginPath();
+  if(type==='mesa'){g.moveTo(x+w*.62,base-h);g.lineTo(x+w*.78,base-h);g.lineTo(x+w*.84,base-h*.72);g.lineTo(x+w*.9,base-h*.7);g.lineTo(x+w,base);g.lineTo(x+w*.68,base)}
+  else if(type==='peak'){g.moveTo(x+w*.45,base-h);g.lineTo(x+w*.55,base-h*.92);g.lineTo(x+w,base);g.lineTo(x+w*.58,base)}
+  else{g.moveTo(x+w/2,base-h);g.quadraticCurveTo(x+w*.75,base-h,x+w,base);g.lineTo(x+w*.62,base)}
+  g.closePath();g.fill();
+  if(type==='mesa'){
+    g.fillStyle='rgba(255,255,255,.16)';g.fillRect(x+w*.2,base-h,w*.42,4);
+    g.fillStyle='rgba(60,20,20,.09)';g.fillRect(x+w*.13,base-h*.42,w*.8,4);g.fillRect(x+w*.08,base-h*.2,w*.86,3);
+  }
+  if(type==='peak'&&theme.snowcap){g.fillStyle='#ffffff';g.beginPath();g.moveTo(x+w*.45,base-h);g.lineTo(x+w*.55,base-h*.92);g.lineTo(x+w*.6,base-h*.78);g.lineTo(x+w*.51,base-h*.82);g.lineTo(x+w*.44,base-h*.76);g.lineTo(x+w*.37,base-h*.8);g.closePath();g.fill()}
+  if(type==='peak'&&theme.lava){g.fillStyle='#ff7a2f';g.beginPath();g.moveTo(x+w*.45,base-h);g.lineTo(x+w*.55,base-h*.92);g.lineTo(x+w*.53,base-h*.8);g.lineTo(x+w*.47,base-h*.86);g.closePath();g.fill()}
+};
+const cloud=(g,x,y,s,col)=>{g.fillStyle=col;g.beginPath();g.moveTo(x+16*s,y);g.arc(x,y,16*s,0,6.29);g.moveTo(x+42*s,y-10*s);g.arc(x+20*s,y-10*s,22*s,0,6.29);g.moveTo(x+62*s,y-2*s);g.arc(x+44*s,y-2*s,18*s,0,6.29);g.rect(x,y-2*s,44*s,16*s);g.fill('nonzero')};   // gộp thành 1 hình để không bị chồng màu
+const paintBackground=()=>{
+  const g=bgCanvas.getContext('2d');
+  const sky=g.createLinearGradient(0,0,0,H*.75);sky.addColorStop(0,theme.sky[0]);sky.addColorStop(1,theme.sky[1]);
+  g.fillStyle=sky;g.fillRect(0,0,W,H);
+  g.fillStyle=theme.moon?'#f4f0d8':theme.lava?'rgba(255,170,90,.35)':'rgba(255,255,255,.45)';g.beginPath();g.arc(rand(220,740),rand(90,150),44,0,6.29);g.fill();
+  for(let i=0;i<4;i++)cloud(g,rand(0,W-60),rand(60,170),rand(.8,1.4),theme.lava?'rgba(70,30,40,.55)':theme.moon?'rgba(120,110,170,.5)':'rgba(255,255,255,.75)');
+  const shapes=(base,col,n,hmin,hmax,wmin,wmax)=>{
+    let x=rand(-120,-20);
+    for(let i=0;i<n&&x<W;i++){const w=rand(wmin,wmax);bgShape(g,theme.bg,x,w,rand(hmin,hmax),base,col);x+=w*rand(.55,1.05)}
+    g.fillStyle=col;g.fillRect(0,base-1,W,H-base+1);
+  };
+  if(theme.water){
+    shapes(H*.56,theme.far,8,14,34,90,170);
+    const sea=g.createLinearGradient(0,H*.56,0,H);sea.addColorStop(0,'#58b7ec');sea.addColorStop(1,'#2d7fd0');
+    g.fillStyle=sea;g.fillRect(0,H*.56,W,H);
+    g.fillStyle='rgba(255,255,255,.3)';for(let i=0;i<26;i++)g.fillRect(rand(0,W),rand(H*.6,H),rand(14,40),2);
+  }else{
+    shapes(H*.58,theme.far,9,70,160,140,260);
+    shapes(H*.68,theme.near,8,40,110,120,220);
+  }
+};
+
+// ===== BƯỚC 8: NGƯỜI CHƠI VÀ LƯỢT CHƠI =====
+const newPlayer=(name,type,x,dir,isAI,hp,team)=>({name,type,T:TANKS[type],x,y:0,dir,isAI,team,hp:Math.round(hp),maxHp:Math.round(hp),
+  angle:45,fuel:100,lastPower:null,energy:0,useSkill:false,stun:false,slow:false,
+  recoil:0,hitT:0,wheel:0,fell:false,shield:0,boost:0,spd:0,tilt:0,frozen:false});   // shield/boost: số lượt còn hiệu lực   // recoil: giật nòng, hitT: nhấp nháy khi trúng đạn, wheel: góc quay bánh xe
+const settle=p=>{const g=groundAt(p.x);if(p.drop){p.y=Math.min(g,p.y+2.6);if(p.y>=g){p.drop=false;smoke.push({x:p.x-20,y:g,vx:-40,vy:-20,r:8,life:.7,col:theme.layers[1]},{x:p.x+20,y:g,vx:40,vy:-20,r:8,life:.7,col:theme.layers[1]})}return}p.y=p.y<g?Math.min(g,p.y+6):g;if(p.y>H&&p.hp>0){p.hp=0;p.fell=true;texts.push({x:p.x,y:H-60,txt:'Rơi xuống!',life:1.5,col:'#fff'})}};
+const startTurn=()=>{
+  // SỬA LỖI: trước đây xoá hết phím đầu lượt nên phím đang giữ bị "nuốt". Giờ giữ nguyên phím đang bấm.
+  const lim=vsAI()?curL().wind:10;
+  wind=Math.round(rand(-1,1)*lim);
+  const p=cur();p.fuel=100;p.useSkill=false;p.slow=false;
+  if(p.shield>0)p.shield--;if(p.boost>0)p.boost--;
+  power=0;charging=false;msgT=1.2;waitT=0;ai=null;
+  // vùng lửa / vùng độc gây sát thương lúc bắt đầu lượt của người đứng trong đó
+  for(const z of zones){
+    if(Math.abs(p.x-z.x)<ZONES[z.kind].r&&p.hp>0){
+      const Z=ZONES[z.kind],col=z.kind==='fire'?'#ff5a1f':'#5ad13b';
+      texts.push({x:p.x,y:p.y-86,txt:z.kind==='fire'?'Bỏng':'Trúng độc',life:1.4,col});damage(p,Z.dmg,col);
+      if(Z.slow)p.slow=true;
+    }
+  }
+  if(p.slow)p.fuel=40;                                            // đi chậm: ít xăng hơn và chạy chậm hơn
+  if((p.stun||p.frozen)&&p.hp>0){p.stun=false;state='stunned';texts.push({x:p.x,y:p.y-60,txt:p.frozen?'Bị đóng băng! Mất lượt':'Tê liệt! Mất lượt',life:1.6,col:p.frozen?'#9fe6ff':'#ffd21f'});return}
+  state='aim';
+  if(p.isAI&&p.hp>0)ai=planAI(p);
+};
+// Hai phe bắn xen kẽ: Bạn → Địch 1 → Bạn → Địch 2 → Bạn → Địch 3 → ...
+const nextTurn=()=>{
+  if(mode==='endless'&&endlessCheck())return;                        // vô tận: hạ địch thì gọi viện binh
+  const alive=t=>players.some(p=>p.team===t&&p.hp>0);
+  if(alive(0)&&!alive(1)&&wave<waveCount()-1)return startWave(wave+1);    // hạ hết đợt này: sang giai đoạn tiếp theo
+  if(!alive(0)||!alive(1))return gameOver();
+  const nt=1-cur().team;
+  const list=players.map((p,i)=>i).filter(i=>players[i].team===nt);
+  const start=list.indexOf(lastIdx[nt]);
+  for(let k=1;k<=list.length;k++){const i=list[(start+k)%list.length];if(players[i].hp>0){turn=i;break}}
+  lastIdx[nt]=turn;
+  if(nt===0){round++;for(const z of zones)z.life--;zones=zones.filter(z=>z.life>0);   // vùng lửa/độc giảm 1 vòng
+    if(crates.length<MAX_CRATES&&(round===2||Math.random()<CRATE_CHANCE))spawnCrate()}   // đầu mỗi vòng có thể thả hòm
+  startTurn();
+};
+
+// ===== BƯỚC 8.5: GIAI ĐOẠN (WAVE) =====
+// Màn nhiều giai đoạn: hạ hết địch đợt này thì đợt sau nhảy dù xuống. Xe người chơi giữ nguyên máu, được hồi thêm WAVE_HEAL.
+let wave=0,phaseT=0;
+const WAVE_HEAL=40,PHASE_MIN=2.2;
+const waveCount=()=>mode==='ai'?LEVELS[level].waves.length:1;
+// Tìm chỗ đáp an toàn cho viện binh: gần vị trí mong muốn, đất chắc (không phải hố sâu/vực), không đè lên xe khác.
+// Nếu quanh đó toàn hố thì đắp lại một mô đất nhỏ để xe đứng được.
+const safeX=(pref,taken)=>{
+  for(let d=0;d<=220;d+=10)for(const x of [pref+d,pref-d]){
+    if(x<W*.42||x>W-30)continue;
+    if(groundAt(x)<H-50&&Math.abs(groundAt(x+15)-groundAt(x-15))<30&&!taken.some(t=>Math.abs(t-x)<70))return x;
+  }
+  const y=H*.7;for(let x=Math.max(0,pref-40);x<Math.min(W,pref+40);x++)ground[x]=Math.min(ground[x],y+Math.abs(x-pref)*.4);
+  return pref;
+};
+const spawnWave=(i,drop)=>{
+  const L=LEVELS[level],list=L.waves[i],hp=enemyHp(list),many=list.length>1;
+  return list.map(([t],j)=>{
+    const x=drop?safeX(ENEMY_X[j],players.filter(q=>q.hp>0).map(q=>q.x).concat(ENEMY_X.slice(0,j))):ENEMY_X[j];
+    const p=newPlayer(many?'Máy '+(j+1):'Máy',t,x,-1,true,hp[j],1);
+    if(drop){p.y=-90-j*55;p.drop=true}else p.y=groundAt(p.x);
+    return p;
+  });
+};
+const startWave=i=>{
+  wave=i;
+  players=players.filter(p=>p.team===0).concat(spawnWave(i,true));            // bỏ xác địch đợt trước, thả đợt mới
+  for(const p of players)if(p.team===0&&p.hp>0){p.hp=Math.min(p.maxHp,p.hp+WAVE_HEAL);texts.push({x:p.x,y:p.y-90,txt:'+'+WAVE_HEAL+' máu',life:2,col:'#4fd16a'})}
+  turn=players.findIndex(p=>p.team===0&&p.hp>0);lastIdx[0]=turn;
+  const m=players.map((p,k)=>k).filter(k=>players[k].team===1);lastIdx[1]=m[m.length-1];
+  shells=[];queue=[];drones=[];
+  state='phase';phaseT=0;sfx.fanfare();
+};
+const drawPhase=()=>{
+  const t=phaseT,a=Math.min(1,t/.3)*(t>PHASE_MIN?Math.max(0,1-(t-PHASE_MIN)/.5):1);
+  if(a<=0)return;
+  ctx.save();ctx.globalAlpha=a;
+  ctx.fillStyle='rgba(20,8,26,.6)';ctx.fillRect(0,H/2-110,W,170);
+  const k=Math.min(1,t/.45),back=1+2.2*(k-1)**3+1.2*(k-1)**2;
+  ctx.save();ctx.translate(W/2,H/2-30);ctx.scale(back,back);bigTitle(mode==='endless'?'VIỆN BINH ĐỊCH':'GIAI ĐOẠN '+(wave+1),0,0,64,'#ffd84a');ctx.restore();
+  ctx.font='800 20px "Baloo 2",sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';
+  ctx.fillText('Viện binh địch đổ bộ: '+players.filter(p=>p.team===1).map(p=>p.T.name).join(', '),W/2,H/2+12);
+  ctx.font='700 15px "Baloo 2",sans-serif';ctx.fillStyle='#8ff0a4';ctx.fillText(mode==='endless'?'Đã hạ '+kills+' xe · '+fmt(matchCoins)+' vàng · hồi '+END_HEAL+' máu mỗi xe hạ được':'Bạn được hồi '+WAVE_HEAL+' máu',W/2,H/2+38);
+  ctx.restore();
+};
+const drawChute=p=>{                                                  // dù của xe địch đang nhảy xuống
+  ctx.save();ctx.translate(p.x,p.y);const sw=Math.sin(performance.now()/400+p.x)*.08;ctx.rotate(sw);
+  ctx.strokeStyle='rgba(60,40,40,.55)';ctx.lineWidth=1.2;ctx.beginPath();
+  for(const [a,b] of [[-34,-22],[-12,-8],[12,8],[34,22]]){ctx.moveTo(a,-96);ctx.lineTo(b,-30)}ctx.stroke();
+  ctx.beginPath();ctx.arc(0,-96,36,Math.PI,0);ctx.closePath();ctx.fillStyle=p.T.color;ctx.fill();
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(0,-96);ctx.arc(0,-96,36,Math.PI*(1.14+i*.28),Math.PI*(1.28+i*.28));ctx.closePath();ctx.fillStyle='rgba(255,255,255,.45)';ctx.fill()}
+  ctx.restore();
+};
+
+// ===== BƯỚC 8.7: CHẾ ĐỘ VÔ TẬN =====
+// Hạ 1 xe địch: nhận vàng + hồi máu, viện binh mới nhảy dù xuống ngay. Địch mạnh dần, càng về sau càng đông (tối đa 3 xe cùng lúc).
+let kills=0,bestKills=0;
+const END_HEAL=20;
+const killReward=()=>Math.min(100,30+5*kills);                  // xe thứ 1: 30 vàng, xe thứ 2: 35 vàng ... tối đa 100 vàng/xe
+const endlessTarget=()=>Math.min(3,1+Math.floor(kills/6));      // hạ 6 xe: 2 địch cùng lúc; hạ 12 xe: 3 địch
+const endlessHp=()=>Math.min(180,80+8*kills,Math.floor(MAX_ENEMY_HP/endlessTarget()));
+// Độ khó hiện tại: máy bắn chuẩn dần, gió mạnh dần, dùng kỹ năng nhiều dần
+const endlessL=()=>({err:[Math.max(2,9-kills*.45),Math.max(2.5,14-kills*.7)],skillRate:Math.min(1,.4+kills*.05),wind:Math.min(10,3+Math.floor(kills/2)),waves:[[]]});
+const curL=()=>mode==='endless'?endlessL():LEVELS[level];
+const vsAI=()=>mode==='ai'||mode==='endless';
+const spawnEndless=drop=>{
+  const used=players.filter(p=>p.team===1&&p.hp>0).map(p=>p.x),ks=Object.keys(TANKS),out=[];
+  while(players.filter(p=>p.team===1&&p.hp>0).length+out.length<endlessTarget()){
+    const slot=ENEMY_X.find(sx=>!used.some(u=>Math.abs(u-sx)<60));if(slot==null)break;
+    const x=drop?safeX(slot,used.concat(players.filter(q=>q.hp>0).map(q=>q.x))):slot;used.push(x);
+    const p=newPlayer('Địch #'+(kills+out.length+1),ks[Math.floor(Math.random()*ks.length)],x,-1,true,endlessHp(),1);
+    if(drop){p.y=-90-out.length*55;p.drop=true}else p.y=groundAt(x);
+    out.push(p);
+  }
+  return out;
+};
+// Gọi đầu mỗi nextTurn: đếm xe địch vừa bị hạ, trả thưởng, gọi viện binh. Trả về true nếu có viện binh đổ bộ.
+const endlessCheck=()=>{
+  const me=players.find(p=>p.team===0);
+  const dead=players.filter(p=>p.team===1&&p.hp<=0);
+  if(!dead.length||!me||me.hp<=0)return false;
+  for(const d of dead){
+    kills++;const r=killReward();matchCoins+=r;
+    texts.push({x:d.x,y:d.y-110,txt:'+'+r+' vàng',life:2,col:'#ffd84a'});sfx.coin();
+  }
+  me.hp=Math.min(me.maxHp,me.hp+END_HEAL*dead.length);
+  texts.push({x:me.x,y:me.y-90,txt:'+'+END_HEAL*dead.length+' máu',life:2,col:'#4fd16a'});
+  players=players.filter(p=>!(p.team===1&&p.hp<=0)).concat([]);
+  players=players.concat(spawnEndless(true));
+  turn=players.indexOf(me);lastIdx[0]=turn;
+  const m=players.map((p,k)=>k).filter(k=>players[k].team===1);lastIdx[1]=m[m.length-1];
+  shells=[];queue=[];drones=[];state='phase';phaseT=0;
+  return true;
+};
+
+// ===== BƯỚC 9: BẮN ĐẠN VÀ KỸ NĂNG =====
+// Mọi sát thương đều đi qua hàm này: trừ máu, hiện số, nháy xe, phát tiếng, và nổ tung nếu hết máu
+const damage=(p,dmg,col)=>{
+  if(p.hp<=0||dmg<=0)return;
+  if(p.shield>0){dmg=Math.max(1,Math.round(dmg*SHIELD_CUT));texts.push({x:p.x,y:p.y-84,txt:'Khiên',life:1,col:'#4fa3ff'})}   // khiên: chỉ nhận một nửa sát thương
+  p.hp=Math.max(0,p.hp-dmg);p.hitT=.4;
+  texts.push({x:p.x,y:p.y-60,txt:'-'+dmg,life:1.2,col});sfx.hit();
+  if(p.hp>0)addEnergy(p,dmg*ENERGY_PER_TAKEN);                 // bị trúng đạn: tích năng lượng theo sát thương nhận vào
+  if(p.hp<=0){
+    blasts.push({x:p.x,y:p.y-16,r:50,t:0,col:'255,140,40'});
+    for(let i=0;i<14;i++)smoke.push({x:p.x+rand(-20,20),y:p.y-16,vx:rand(-40,40),vy:rand(-70,-20),r:rand(8,14),life:rand(1,1.6),col:'#4a4040'});
+    texts.push({x:p.x,y:p.y-86,txt:'Hạ gục!',life:1.8,col:'#fff'});shake=.5;sfx.boom(1.5);
+  }
+};
+const addEnergy=(p,v)=>{const was=p.energy<100;p.energy=Math.min(100,p.energy+v);if(was&&p.energy>=100&&!p.isAI)sfx.ready()};
+// Chớp lửa đầu nòng + khói + giật nòng mỗi khi bắn
+let muzzles=[];
+const muzzleFx=p=>{
+  const m=muzzle(p);p.recoil=1;muzzles.push({x:m.x,y:m.y,a:m.a,dir:p.dir,t:0});
+  for(let i=0;i<4;i++)smoke.push({x:m.x,y:m.y,vx:Math.cos(m.a)*p.dir*rand(20,60),vy:-Math.sin(m.a)*rand(20,60)-10,r:rand(4,7),life:rand(.4,.7),col:'#d8d0c8'});
+};
+// Tâm xoay nòng nằm trên thân xe nên nghiêng theo xe; còn góc nòng luôn tính so với phương ngang (người chơi dễ canh)
+const muzzle=(p,ang=p.angle)=>{
+  const a=ang*Math.PI/180,t=p.tilt||0,px=PIV.x*p.dir,py=-PIV.y;
+  const cx=p.x+px*Math.cos(t)-py*Math.sin(t),cy=p.y+px*Math.sin(t)+py*Math.cos(t);
+  return {x:cx+Math.cos(a)*BARREL*p.dir,y:cy-Math.sin(a)*BARREL,a};
+};
+const launch=(p,ang,pw,kind,off,fromSkill)=>{
+  const m=muzzle(p,ang),v=pw/100*MAX_SPEED;
+  shells.push({x:m.x+Math.sin(m.a)*p.dir*off,y:m.y+Math.cos(m.a)*off,vx:Math.cos(m.a)*v*p.dir,vy:-Math.sin(m.a)*v,
+               kind,owner:p,fromSkill,age:0,trail:[]});
+};
+// UAV: quãng đường bay = lực, luôn bay theo hướng xe đang quay mặt
+const uavTarget=(p,pw)=>clamp(p.x+p.dir*Math.max(40,pw/100*W*.95),12,W-12);
+const fire=()=>{
+  const p=cur(),pw=power,ang=p.angle,sk=p.useSkill,k=p.T.skill;
+  p.lastPower=pw;charging=false;if(keys.fire)fireLatch=true;
+  if(sk){p.energy=0;p.useSkill=false}else addEnergy(p,ENERGY_PER_SHOT);
+  setCharge(null);
+  // tiếng bắn + chớp lửa (Cuồng Phong thì mỗi viên một tiếng, làm trong hàng chờ)
+  const snd=!sk?'normal':{laser:'laser',electric:'rod',tech:'drone',mega:'missile',seeker:'seeker',ice:'ice',cluster:'missile',flame:'barrel',poison:'poison'}[k]||'normal';
+  if(!(sk&&k==='rapid')){sfx.shoot(snd);muzzleFx(p)}
+  if(!sk)launch(p,ang,pw,'normal',0,false);
+  else if(k==='rapid')for(let i=0;i<5;i++)queue.push({t:i*.22,go:()=>{launch(p,ang,pw,'rapid',0,true);sfx.shoot('normal');muzzleFx(p)}});
+  else if(k==='spread')for(const d of [-3,-1.5,0,1.5,3])launch(p,ang+d,pw,'spread',0,true);
+  else if(k==='twin'){launch(p,ang,pw,'twin',-8,true);launch(p,ang,pw,'twin',8,true)}
+  else if(k==='laser')fireLaser(p,ang);
+  else if(k==='flame')launch(p,ang,pw,'barrel',0,true);
+  else if(k==='poison')launch(p,ang,pw,'poison',0,true);
+  else if(k==='mega')launch(p,ang,pw,'missile',0,true);
+  else if(k==='electric')launch(p,ang,pw,'rod',0,true);
+  else if(k==='seeker')launch(p,ang,pw,'seeker',0,true);
+  else if(k==='ice')launch(p,ang,pw,'ice',0,true);
+  else if(k==='cluster')launch(p,ang,pw,'cluster',0,true);
+  else if(k==='tech'){const m=muzzle(p);drones.push({x:m.x,y:m.y,tx:uavTarget(p,pw),phase:'up',owner:p,t:0})}
+  state='fly';
+};
+const distSeg=(px,py,x1,y1,x2,y2)=>{const dx=x2-x1,dy=y2-y1,l=dx*dx+dy*dy;let t=l?((px-x1)*dx+(py-y1)*dy)/l:0;t=clamp(t,0,1);return Math.hypot(px-(x1+t*dx),py-(y1+t*dy))};
+const fireLaser=(p,ang)=>{
+  const m=muzzle(p,ang),dx=Math.cos(m.a)*p.dir,dy=-Math.sin(m.a);
+  let len=0;
+  while(len<1600){
+    const x=m.x+dx*len,y=m.y+dy*len;
+    if(x<-20||x>W+20||y<-300||y>H+20)break;
+    if(Math.abs(y-groundAt(x))<5)dig(x,y,6);
+    len+=4;
+  }
+  const x2=m.x+dx*len,y2=m.y+dy*len;
+  for(const q of players){
+    if(q.team===p.team||q.hp<=0)continue;
+    if(distSeg(q.x,q.y-BODY_Y,m.x,m.y,x2,y2)<HIT_R+4){damage(q,LASER_DMG);flash=.2}
+  }
+  lasers.push({x1:m.x,y1:m.y,x2,y2,t:0});shake=.2;
+};
+
+// ===== BƯỚC 10: VỤ NỔ, SÁT THƯƠNG, NĂNG LƯỢNG =====
+const explode=(x,y,kind,owner,fromSkill)=>{
+  const S=SHELL[kind],R=S.r+HIT_R;
+  dig(x,y,S.dig||S.r*DIG_SCALE);    // vụ nổ vẫn gây sát thương rộng, nhưng chỉ khoét hố nhỏ (trừ loại đạn có dig riêng)
+  if(S.dig)for(let i=0;i<16;i++)smoke.push({x:x+rand(-S.dig,S.dig)*.6,y,vx:rand(-160,160),vy:rand(-300,-120),r:rand(3,6),life:rand(.7,1.2),col:theme.layers[i%3+1],grav:1});   // đất đá văng tung toé
+  for(const p of players){
+    if(p.hp<=0)continue;
+    const d=Math.hypot(p.x-x,(p.y-BODY_Y)-y);
+    if(d>=R)continue;
+    const dmg=Math.round(S.dmg*(1-.7*d/R));
+    damage(p,dmg);flash=.15;
+    if(S.stun&&owner&&p.team!==owner.team)p.stun=true;
+    if(S.freeze&&owner&&p.team!==owner.team&&p.hp>0){p.frozen=true;texts.push({x:p.x,y:p.y-86,txt:'Đóng băng!',life:1.6,col:'#9fe6ff'});sfx.freeze()}
+    // bắn thường trúng đối thủ: tích thêm năng lượng theo sát thương
+    if(ENERGY_PER_DMG&&owner&&p.team!==owner.team&&!fromSkill)addEnergy(owner,dmg*ENERGY_PER_DMG);
+  }
+  for(const c of crates)if(owner&&Math.hypot(c.x-x,c.y-11-y)<S.r*.8+14)applyCrate(owner,c);   // bắn trúng hòm: người bắn nhận luôn
+  if(S.zone)zones.push({x,kind:S.zone,life:ZONES[S.zone].life});
+  if(S.split){                                                       // bom chùm: bung bom con toả hình quạt lên trên
+    for(let i=0;i<S.split;i++){
+      const a=-Math.PI*(.12+.76*i/(S.split-1))+rand(-.08,.08),v=rand(170,290);
+      shells.push({x,y:y-10,vx:Math.cos(a)*v,vy:Math.sin(a)*v,kind:'bomblet',owner,fromSkill:true,age:0,ghost:.18,trail:[]});
+    }
+  }
+  if(kind==='ice')for(let i=0;i<14;i++)smoke.push({x,y,vx:rand(-150,150),vy:rand(-240,-60),r:rand(2,4),life:rand(.5,1),col:'#e6f9ff',grav:1});   // mảnh băng văng
+  const col=kind==='ice'?'200,240,255':kind==='eball'?'155,231,255':kind==='poison'?'125,255,90':'255,170,60';
+  blasts.push({x,y,r:S.r,t:0,col});
+  sfx.boom(S.r/40);if(kind==='eball')sfx.zap();
+  for(let i=0;i<(kind==='missile'?16:7);i++)smoke.push({x:x+rand(-S.r,S.r)*.5,y:y+rand(-10,6),vx:rand(-30,30),vy:rand(-50,-15),r:rand(8,16)*(S.r/40),life:rand(.8,1.4)});
+  for(let i=0;i<10;i++)smoke.push({x,y,vx:rand(-120,120),vy:rand(-220,-60),r:rand(2,4),life:rand(.5,.9),col:theme.layers[2],grav:1});   // đất văng
+  shake=Math.max(shake,kind==='missile'?.5:.25);
+};
+
+// ===== BƯỚC 11: MÁY TỰ NGẮM (AI) =====
+const simulate=(p,ang,pw,tgt)=>{
+  const m=muzzle(p,ang),v=pw/100*MAX_SPEED,s=1/120;
+  let x=m.x,y=m.y,vx=Math.cos(m.a)*v*p.dir,vy=-Math.sin(m.a)*v;
+  for(let i=0;i<1500;i++){
+    vx+=wind*WIND_FORCE*s;vy+=GRAVITY*s;x+=vx*s;y+=vy*s;
+    if(x<-200||x>W+200||y>H+60)return null;
+    if(Math.hypot(tgt.x-x,tgt.y-BODY_Y-y)<HIT_R||y>=groundAt(x))return {x,y};
+  }
+  return null;
+};
+const planAI=p=>{
+  const L=curL(),k=p.T.skill,rnd=()=>rand(-1,1);
+  const tgt=players.filter(q=>q.team!==p.team&&q.hp>0).sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))[0];   // nhắm xe đối phương gần nhất
+  if(!tgt)return {ang:p.angle,pw:50,useSkill:false,think:.3,moved:true};   // không còn mục tiêu: không làm gì
+  p.dir=tgt.x<p.x?-1:1;
+  let useSkill=p.energy>=100&&Math.random()<L.skillRate,best=null;
+  if(useSkill&&k==='tech'){
+    const pw=Math.abs(tgt.x-p.x)/(W*.95)*100;
+    return {ang:p.angle,pw:clamp(pw+rnd()*L.err[1]*.6,5,100),useSkill,think:.8};
+  }
+  if(useSkill&&k==='laser'){
+    const ang=Math.atan2((p.y-PIV.y)-(tgt.y-BODY_Y),Math.abs(tgt.x-p.x))*180/Math.PI;
+    if(ang>=MIN_ANGLE)best={ang,pw:50};else useSkill=false;
+  }
+  if(!best){
+    best={ang:45,pw:60,d:1e9};
+    for(let ang=15;ang<=85;ang+=5)for(let pw=20;pw<=100;pw+=2){
+      const h=simulate(p,ang,pw,tgt);if(!h)continue;
+      const d=Math.hypot(h.x-tgt.x,h.y-tgt.y);if(d<best.d)best={ang,pw,d};
+    }
+  }
+  return {ang:clamp(best.ang+rnd()*L.err[0],MIN_ANGLE,90),pw:clamp(best.pw+rnd()*L.err[1],10,100),useSkill,think:.8};
+};
+const runAI=(p,dt)=>{
+  if(!ai.moved){                                                    // có hòm đã đáp đất trong tầm 150px thì lái tới nhặt
+    const c=crates.find(c=>!c.chute&&Math.abs(c.x-p.x)<150&&Math.abs(c.y-p.y)<60);
+    if(c&&Math.abs(c.x-p.x)>6&&driveTank(p,Math.sign(c.x-p.x),dt)){ai.went=true;return}
+    ai.moved=true;p.spd=0;
+    if(ai.went){const t=ai.think;ai=planAI(p);ai.moved=true;ai.think=Math.min(t,.4)}
+    return;
+  }
+  if(ai.think>0){ai.think-=dt;return}
+  if(ai.useSkill&&!ai.cut){ai.cut=true;showCutin(p)}
+  p.useSkill=ai.useSkill;
+  const k=p.T.skill;
+  if(!(p.useSkill&&k==='tech')){
+    const da=ai.ang-p.angle;
+    if(Math.abs(da)>.5){p.angle+=Math.sign(da)*Math.min(Math.abs(da),40*dt);return}
+  }
+  if(p.useSkill&&k==='laser'){power=0;fire();return}
+  charging=true;power+=55*dt;
+  if(power>=ai.pw){power=ai.pw;fire()}
+};
+
+// ===== BƯỚC 12: ĐIỀU KHIỂN =====
+// Dùng e.code (vị trí phím) chứ không dùng e.key, để bộ gõ tiếng Việt không làm kẹt phím.
+const KEYMAP={KeyA:'left',KeyD:'right',KeyW:'up',KeyS:'down',KeyE:'skill',Space:'fire',
+              ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'};
+const humanTurn=()=>state==='aim'&&cur()&&!cur().isAI;
+const press=k=>{
+  if(!humanTurn())return;
+  const p=cur();
+  if(k==='fire'&&!charging){charging=true;power=0}
+  if(k==='skill'&&p.energy>=100&&!charging){p.useSkill=!p.useSkill;if(p.useSkill)showCutin(p);else sfx.click()}
+};
+const release=k=>{if(k==='fire'&&charging&&humanTurn())fire()};
+addEventListener('keydown',e=>{
+  if(e.target.closest&&e.target.closest('input,textarea'))return;   // đang gõ tên: không coi là phím điều khiển
+  const k=KEYMAP[e.code];
+  if(state==='victory'){e.preventDefault();skipWin();return}
+  if(state==='intro'){e.preventDefault();startTurn()}               // bỏ qua màn giới thiệu, và phím này vẫn được tính luôn
+  if(!k||state==='menu')return;
+  e.preventDefault();if(e.repeat)return;keys[k]=true;press(k);
+});
+addEventListener('keyup',e=>{const k=KEYMAP[e.code];if(!k)return;if(state!=='menu')e.preventDefault();keys[k]=false;if(k==='fire')fireLatch=false;release(k)});   // preventDefault: Space không "bấm" lại nút đang được chọn
+addEventListener('visibilitychange',()=>{if(document.hidden)clearKeys()});
+addEventListener('blur',clearKeys);
+for(const b of document.querySelectorAll('[data-k]')){
+  const k=b.dataset.k;
+  b.tabIndex=-1;   // nút trên màn hình không giữ focus bàn phím
+  b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(_){}keys[k]=true;press(k)});
+  const up=()=>{if(keys[k]){keys[k]=false;if(k==='fire')fireLatch=false;release(k)}};
+  for(const ev of ['pointerup','pointerleave','pointercancel','lostpointercapture'])b.addEventListener(ev,up);
+}
+
+// ===== BƯỚC 12.5: LUỒNG GIÓ TRÊN BẢN ĐỒ =====
+// Gió càng mạnh thì càng nhiều luồng khí, bay càng nhanh và càng dài. Hạt bụi/tuyết/tàn lửa cũng trôi theo gió.
+let airs=[],motes=[];
+const airSpeed=()=>wind*22+Math.sign(wind)*30;
+const newAir=anyX=>{
+  const v=airSpeed();
+  return {x:anyX?rand(0,W):(v>0?-rand(20,240):W+rand(20,240)),y:rand(40,H*.72),len:rand(40,90)*(.6+Math.abs(wind)/10),sp:rand(.8,1.3),ph:rand(0,6)};
+};
+const updateAir=dt=>{
+  const n=Math.abs(wind)*2;                                    // gió 10 → 20 luồng, gió 0 → không có luồng nào
+  while(airs.length<n)airs.push(newAir(true));
+  if(airs.length>n)airs.length=n;
+  const v=airSpeed();
+  for(const a of airs){
+    a.x+=v*a.sp*dt;a.ph+=dt*3;
+    if(a.x>W+a.len+40||a.x<-a.len-40){Object.assign(a,newAir(false))}
+  }
+  if(!motes.length)for(let i=0;i<26;i++)motes.push({x:rand(0,W),y:rand(0,H),s:rand(.6,1.4),ph:rand(0,6)});
+  const fall=theme.snowcap?22:theme.lava?-14:4;
+  for(const m of motes){
+    m.ph+=dt*2;m.x+=(wind*16*m.s+Math.sin(m.ph)*6)*dt;m.y+=(fall*m.s+Math.cos(m.ph)*5)*dt;
+    if(m.x>W+10)m.x=-10;if(m.x<-10)m.x=W+10;if(m.y>H)m.y=0;if(m.y<0)m.y=H;
+  }
+};
+const drawAir=()=>{
+  if(!wind)return;
+  const dir=Math.sign(wind),alpha=Math.min(.85,.35+Math.abs(wind)*.05);
+  ctx.lineCap='round';
+  for(const a of airs){
+    ctx.beginPath();
+    for(let i=0;i<=10;i++){const px=a.x-dir*a.len*i/10,py=a.y+Math.sin(a.ph+i*.55)*4*(1-i/12);i?ctx.lineTo(px,py):ctx.moveTo(px,py)}
+    const g=ctx.createLinearGradient(a.x,0,a.x-dir*a.len,0),sh=ctx.createLinearGradient(a.x,0,a.x-dir*a.len,0);
+    g.addColorStop(0,`rgba(255,255,255,${alpha})`);g.addColorStop(1,'rgba(255,255,255,0)');
+    sh.addColorStop(0,`rgba(90,40,60,${alpha*.25})`);sh.addColorStop(1,'rgba(90,40,60,0)');
+    ctx.save();ctx.translate(0,2);ctx.strokeStyle=sh;ctx.lineWidth=3;ctx.stroke();ctx.restore();   // bóng mờ để nổi trên nền trời sáng
+    ctx.strokeStyle=g;ctx.lineWidth=2.8;ctx.stroke();
+    // đầu luồng gió xoáy nhẹ
+    ctx.beginPath();ctx.arc(a.x+dir*3,a.y-4,4,dir>0?Math.PI*.5:Math.PI*.5,dir>0?Math.PI*2:-Math.PI,dir<0);ctx.strokeStyle=`rgba(255,255,255,${alpha*.8})`;ctx.lineWidth=2.2;ctx.stroke();
+  }
+};
+const drawMotes=()=>{
+  const col=theme.snowcap?'#ffffff':theme.lava?'#ff9a4a':theme.bg==='mesa'?'#ffe1a6':'#d8ffc2';
+  ctx.fillStyle=col;
+  for(const m of motes){ctx.globalAlpha=.55;ctx.beginPath();ctx.arc(m.x,m.y,1.6*m.s,0,6.29);ctx.fill()}
+  ctx.globalAlpha=1;
+};
+
+// ===== BƯỚC 12.8: ĐẠN TRUY KÍCH =====
+// "Nhìn thấy" = đoạn thẳng từ đạn tới xe địch không cắt qua mặt đất. Kiểm tra bằng cách lấy mẫu từng 6px dọc đoạn thẳng.
+const canSee=(x1,y1,x2,y2)=>{
+  const n=Math.ceil(Math.hypot(x2-x1,y2-y1)/6);
+  for(let i=1;i<n;i++){const x=x1+(x2-x1)*i/n,y=y1+(y2-y1)*i/n;if(y>=groundAt(x)-2)return false}
+  return true;
+};
+const findLock=b=>{
+  let best=null,bd=SEEK_RANGE;
+  for(const p of players){
+    if(p.hp<=0||p.team===b.owner.team)continue;
+    const d=Math.hypot(p.x-b.x,p.y-BODY_Y-b.y);
+    if(d<bd&&canSee(b.x,b.y,p.x,p.y-BODY_Y)){best=p;bd=d}
+  }
+  return best;
+};
+// Quay hướng bay về phía mục tiêu, mỗi bước chỉ quay tối đa SEEK_TURN*s radian (nên đạn lượn vòng mượt, không bẻ gắt)
+const steer=(b,s)=>{
+  const t=b.lock,want=Math.atan2(t.y-BODY_Y-b.y,t.x-b.x),cur=Math.atan2(b.vy,b.vx);
+  let d=want-cur;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;
+  b.lockT=(b.lockT||0)+s;const turn=SEEK_TURN*(1+b.lockT*4);   // khoá càng lâu quay càng gắt, để đạn không bay vòng quanh mục tiêu mãi
+  const a=cur+clamp(d,-turn*s,turn*s),sp=Math.min(SEEK_SPEED,Math.hypot(b.vx,b.vy)+900*s);
+  b.vx=Math.cos(a)*sp;b.vy=Math.sin(a)*sp;
+};
+
+// ===== BƯỚC 12.9: HÒM TIẾP TẾ =====
+// Hòm thả dù ngẫu nhiên đầu mỗi vòng. Lái xe chạm vào để nhặt, hoặc bắn nổ gần hòm để nhận từ xa.
+const CRATES={
+  heal  :{name:'Hồi máu',   col:'#4fd16a',msg:'+50 máu'},
+  shield:{name:'Khiên',     col:'#4fa3ff',msg:'Khiên: giảm 50% sát thương trong 2 lượt'},
+  energy:{name:'Năng lượng',col:'#ffd84a',msg:'Năng lượng đầy 100%'},
+  speed :{name:'Tăng tốc',  col:'#3fe0e0',msg:'Chạy nhanh gấp đôi, ít tốn xăng trong 2 lượt'},
+  coin  :{name:'Hòm vàng',  col:'#ffc21a',msg:''}   // chỉ có ở chế độ đánh máy
+};
+const COIN_CHANCE=.35;   // tỉ lệ hòm thả xuống là hòm vàng (chế độ đánh máy)
+const HEAL_AMOUNT=50,SHIELD_CUT=.5,CRATE_CHANCE=.5,MAX_CRATES=3;
+let crates=[],round=0;
+const spawnCrate=()=>{
+  for(let i=0;i<20;i++){
+    const x=rand(60,W-60);
+    if(groundAt(x)>H-20||players.some(p=>Math.abs(p.x-x)<50)||crates.some(c=>Math.abs(c.x-x)<60))continue;
+    const types=Object.keys(CRATES).filter(k=>k!=='coin'),type=vsAI()&&Math.random()<COIN_CHANCE?'coin':types[Math.floor(Math.random()*types.length)];
+    crates.push({x,y:-40,vy:60,type,chute:true,t:0,amt:Math.round(rand(4,9))*10});
+    texts.push({x,y:110,txt:'Hòm tiếp tế!',life:2,col:CRATES[type].col});sfx.drop();
+    return;
+  }
+};
+const applyCrate=(p,c)=>{
+  if(c.dead||p.hp<=0)return;
+  c.dead=true;const C=CRATES[c.type];
+  if(c.type==='heal')p.hp=Math.min(p.maxHp,p.hp+HEAL_AMOUNT);
+  else if(c.type==='shield')p.shield=2;
+  else if(c.type==='energy')addEnergy(p,100);
+  else if(c.type==='speed')p.boost=2;
+  if(c.type==='coin'){                                              // hòm vàng: chỉ người chơi nhặt mới được vàng, máy nhặt thì mất
+    if(!p.isAI){matchCoins+=c.amt;texts.push({x:p.x,y:p.y-96,txt:'+'+c.amt+' vàng',life:2,col:C.col});sfx.coin()}
+    else texts.push({x:p.x,y:p.y-96,txt:'Máy cướp hòm vàng!',life:1.8,col:'#ff8a6a'});
+    blasts.push({x:c.x,y:c.y-11,r:26,t:0,col:'255,220,90'});return;
+  }
+  texts.push({x:p.x,y:p.y-96,txt:C.name+'!',life:1.8,col:C.col});
+  if(!p.isAI)texts.push({x:W/2,y:150,txt:C.msg,life:2.2,col:'#fff'});
+  blasts.push({x:c.x,y:c.y-11,r:26,t:0,col:'255,255,220'});sfx.pickup();
+};
+const updateCrates=dt=>{
+  for(const c of crates){
+    c.t+=dt;const g=groundAt(c.x);
+    if(c.y<g){
+      if(c.chute){c.vy=60;c.x=clamp(c.x+wind*3*dt,20,W-20)}else c.vy+=500*dt;    // có dù thì rơi chậm và trôi theo gió
+      c.y=Math.min(g,c.y+c.vy*dt);
+    }
+    if(c.y>=g){c.y=g;c.chute=false;c.vy=0}
+    if(c.y>H)c.dead=true;                                                         // rơi xuống vực / nước
+    for(const p of players)if(p.hp>0&&Math.abs(p.x-c.x)<26&&Math.abs(p.y-c.y)<34)applyCrate(p,c);
+  }
+  crates=crates.filter(c=>!c.dead);
+};
+const drawCrate=c=>{
+  const C=CRATES[c.type];ctx.save();ctx.translate(c.x,c.y);
+  if(c.chute){                                                                    // dù
+    const sw=Math.sin(c.t*2)*.08;ctx.rotate(sw);
+    ctx.strokeStyle='rgba(60,40,40,.6)';ctx.lineWidth=1;ctx.beginPath();
+    for(const [a,b] of [[-22,-9],[-8,-4],[8,4],[22,9]]){ctx.moveTo(a,-58);ctx.lineTo(b,-22)}ctx.stroke();
+    ctx.beginPath();ctx.arc(0,-58,23,Math.PI,0);ctx.closePath();ctx.fillStyle=C.col;ctx.fill();
+    ctx.beginPath();ctx.arc(0,-58,23,Math.PI*1.33,Math.PI*1.67);ctx.lineTo(0,-58);ctx.fillStyle='rgba(255,255,255,.55)';ctx.fill();
+  }else{ctx.globalAlpha=.35+.25*Math.sin(c.t*4);dot(ctx,0,-11,20,C.col);ctx.globalAlpha=1}   // hòm đã đáp đất: phát sáng nhẹ
+  rr(ctx,-12,-23,24,23,3,'#b07a44');rr(ctx,-12,-23,24,4,2,'#d9a26a');rr(ctx,-12,-4,24,4,2,'#8a5a30');
+  rr(ctx,-12,-15,24,7,1,C.col);
+  ctx.fillStyle='#fff';ctx.strokeStyle='#fff';ctx.lineWidth=2.2;
+  if(c.type==='heal'){ctx.fillRect(-1.5,-15,3,7);ctx.fillRect(-3.5,-13,7,3)}
+  else if(c.type==='shield')poly(ctx,[[-3.5,-14.5],[3.5,-14.5],[3.5,-11.5],[0,-8.5],[-3.5,-11.5]],'#fff');
+  else if(c.type==='energy')poly(ctx,[[1,-15],[-3,-11],[0,-11],[-1,-8],[3,-12],[0,-12]],'#fff');
+  else if(c.type==='coin'){dot(ctx,0,-11.5,4.5,'#fff3b0');dot(ctx,0,-11.5,2.6,'#e0a92a')}
+  else{ctx.beginPath();ctx.moveTo(-5,-14);ctx.lineTo(-2,-11.5);ctx.lineTo(-5,-9);ctx.moveTo(0,-14);ctx.lineTo(3,-11.5);ctx.lineTo(0,-9);ctx.stroke()}
+  ctx.restore();
+};
+// Di chuyển dùng chung cho người và máy. Trả về true nếu xe thật sự đi được.
+// Lái xe: tốc độ tăng dần khi giữ phím và giảm dần (trôi một chút) khi nhả, giống xe thật có quán tính.
+// mv = -1 (trái), 0 (không bấm), 1 (phải). Trả về true nếu xe thật sự di chuyển.
+const driveTank=(p,mv,dt)=>{
+  if(mv)p.dir=mv;
+  const max=p.slow?25:p.boost>0?120:60,burn=p.boost>0?10:25;      // tăng tốc: nhanh gấp đôi, tốn xăng chưa bằng nửa
+  const target=(p.fuel>0?mv:0)*max;
+  p.spd+=(target-p.spd)*Math.min(1,dt*(mv?4.5:7));                 // ga thì tăng từ từ, nhả thì phanh nhanh hơn
+  if(!mv&&Math.abs(p.spd)<2){p.spd=0;return false}
+  const nx=clamp(p.x+p.spd*dt,10,W-10);
+  if(groundAt(nx)-p.y<=-6||nx===p.x){p.spd=0;return false}          // dốc quá cao: dừng
+  p.x=nx;p.wheel+=p.spd*dt;
+  if(mv)p.fuel=Math.max(0,p.fuel-burn*dt*Math.abs(p.spd)/max);
+  const sp=Math.abs(p.spd)/60,back=-Math.sign(p.spd);
+  if(Math.random()<.35+sp*.4)smoke.push({x:p.x+back*24,y:p.y-2,vx:back*rand(15,45)*sp,vy:rand(-35,-10),r:rand(2.5,5),life:rand(.4,.7),col:theme.layers[1],grav:Math.random()<.4?1:0});   // đất cát văng sau xích
+  if(Math.random()<.18)smoke.push({x:p.x-p.dir*20,y:p.y-24,vx:-p.dir*rand(10,25)+wind*4,vy:rand(-25,-12),r:rand(3,5),life:rand(.6,1),col:'#9a948e'});        // khói xả từ ống bô
+  return true;
+};
+// Độ nghiêng thân xe theo dốc: lấy độ cao mặt đất ở bánh trước và bánh sau
+const updateTilt=(p,dt)=>{
+  const a=groundAt(p.x-16),b=groundAt(p.x+16);
+  const want=(a>H||b>H)?p.tilt:clamp(Math.atan2(b-a,32),-.45,.45);
+  p.tilt+=(want-p.tilt)*Math.min(1,dt*10);
+};
+
+// ===== BƯỚC 12.95: HIỆU ỨNG BẬT KỸ NĂNG =====
+// Một dải màu chéo trượt qua màn hình, có hình xe và tên kỹ năng, rồi trượt ra.
+let cutin=null;
+const CUT_TIME=1.4;
+const showCutin=p=>{cutin={p,t:0};sfx.skill()};
+const drawCutin=()=>{
+  const {p,t}=cutin,ein=Math.min(1,t/.22),eout=t>CUT_TIME-.3?(t-(CUT_TIME-.3))/.3:0;
+  const slide=(1-(1-ein)**3)-eout,off=(1-slide)*W*(p.team?1:-1),cy=H/2-30;
+  ctx.save();ctx.globalAlpha=Math.min(1,slide*1.5);
+  ctx.fillStyle=`rgba(255,255,255,${.25*(1-ein)})`;ctx.fillRect(0,0,W,H);            // chớp sáng lúc mới hiện
+  ctx.translate(off,0);
+  ctx.beginPath();ctx.moveTo(0,cy-62);ctx.lineTo(W,cy-86);ctx.lineTo(W,cy+62);ctx.lineTo(0,cy+86);ctx.closePath();
+  ctx.fillStyle=p.T.color;ctx.fill();ctx.fillStyle='rgba(0,0,0,.28)';ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.18)';for(let i=0;i<6;i++)ctx.fillRect(((t*900+i*190)%(W+200))-100,cy-70+i*24,120,3);   // vệt tốc độ
+  const side=p.team?-1:1,tx=p.team?W*.74:W*.26;
+  ctx.save();ctx.translate(tx,cy+46);ctx.scale(side*3.4,3.4);
+  glow(ctx,p.T.pal[0],18,()=>drawTankArt(ctx,p.T,30,0,0));ctx.restore();
+  ctx.textAlign=p.team?'right':'left';
+  const lx=p.team?W*.56:W*.44;
+  ctx.font='800 16px "Baloo 2",sans-serif';ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillText(p.name+' · '+p.T.name+' kích hoạt',lx,cy-22);
+  ctx.font='800 46px "Baloo 2",sans-serif';ctx.lineJoin='round';ctx.lineWidth=8;ctx.strokeStyle='#2a1030';ctx.strokeText(p.T.skillName,lx,cy+26);
+  ctx.fillStyle='#ffd84a';ctx.fillText(p.T.skillName,lx,cy+26);
+  ctx.restore();
+};
+
+// ===== BƯỚC 12.85: CỘT THU LÔI (kỹ năng Lôi Thần) =====
+// Đạn thu lôi chạm xe địch hoặc mặt đất thì cắm vào đó. Sau ROD_DELAY giây, sét đánh thẳng xuống đúng chỗ cột.
+let rods=[],bolts=[],whiteFlash=0;
+const ROD_DELAY=1.1,CLOUD_Y=128;   // mây giông nằm dưới bảng máu để nhìn thấy rõ
+const stickRod=b=>{
+  const hr=HIT_R;
+  const t=players.find(p=>p.hp>0&&!(p===b.owner&&b.age<.15)&&Math.hypot(p.x-b.x,p.y-BODY_Y-b.y)<hr);
+  rods.push({x:b.x,y:t?b.y:groundAt(b.x),tank:t||null,ox:t?b.x-t.x:0,oy:t?b.y-t.y:0,ang:Math.atan2(b.vy,b.vx),t:0,owner:b.owner});
+  if(t)texts.push({x:t.x,y:t.y-86,txt:'Dính cột thu lôi!',life:1.4,col:'#ffd21f'});
+  sfx.clang();
+};
+const strike=r=>{                                                     // sét đánh xuống
+  bolts.push({x:r.x,y:r.y,t:0});
+  if(r.tank&&r.tank.hp>0)explode(r.tank.x,r.tank.y-BODY_Y,'rod',r.owner,true);   // cột cắm trên xe: sét đánh trúng tâm xe, sát thương tối đa
+  else explode(r.x,r.y-4,'rod',r.owner,true);
+  for(let i=0;i<18;i++)smoke.push({x:r.x,y:r.y-6,vx:rand(-160,160),vy:rand(-260,-60),r:rand(1.5,3),life:rand(.3,.7),col:i%2?'#fff6b0':'#9be7ff',grav:1});   // tia lửa điện
+  whiteFlash=.55;shake=.55;sfx.thunder();
+};
+const updateRods=dt=>{
+  for(const r of rods){
+    r.t+=dt;
+    if(r.tank){r.x=r.tank.x+r.ox;r.y=r.tank.y+r.oy}                  // cột dính trên xe thì đi theo xe
+    else r.y=Math.max(r.y,Math.min(groundAt(r.x),H+40));             // đất dưới cột bị đào: cột rơi xuống theo
+    if(r.t>=ROD_DELAY&&!r.done){r.done=true;strike(r)}
+  }
+  rods=rods.filter(r=>!r.done);
+  for(const l of bolts)l.t+=dt;bolts=bolts.filter(l=>l.t<.45);
+  whiteFlash=Math.max(0,whiteFlash-dt*1.6);
+};
+const drawRods=()=>{
+  // trời tối dần và mây giông kéo tới khi sắp có sét
+  const k=rods.reduce((m,r)=>Math.max(m,r.t/ROD_DELAY),0);
+  if(k>0){ctx.fillStyle=`rgba(12,14,40,${.45*k})`;ctx.fillRect(-20,-20,W+40,H+40)}
+  for(const r of rods){
+    const p=r.t/ROD_DELAY;
+    ctx.save();ctx.globalAlpha=p;                                       // mây giông ngay phía trên cột
+    for(const [dx,dy,s] of [[-40,8,26],[0,0,34],[38,10,24],[-14,16,22],[20,18,22]])dot(ctx,r.x+dx,CLOUD_Y+dy,s,'#3b3a52');
+    for(const [dx,dy,s] of [[-30,0,16],[4,-8,20],[30,2,14]])dot(ctx,r.x+dx,CLOUD_Y+dy,s,'#55546e');
+    if(Math.random()<.25*p){ctx.strokeStyle='rgba(200,230,255,.8)';ctx.lineWidth=1.5;ctx.beginPath();let x=r.x+rand(-40,40),y=CLOUD_Y+8;ctx.moveTo(x,y);for(let i=0;i<3;i++){x+=rand(-10,10);y+=rand(6,12);ctx.lineTo(x,y)}ctx.stroke()}
+    ctx.restore();
+    // thân cột thu lôi
+    ctx.save();ctx.translate(r.x,r.y);ctx.rotate(r.ang);
+    rr(ctx,-16,-1.6,20,3.2,1.6,'#cfd6e6');rr(ctx,-16,-1.6,20,1.2,.6,'#ffffff');
+    ctx.restore();
+    const tx=r.x-Math.cos(r.ang)*14,ty=r.y-Math.sin(r.ang)*14,blink=Math.floor(r.t*(6+10*p))%2;
+    glow(ctx,'#ffd21f',10+14*p,()=>dot(ctx,tx,ty,3.6,blink?'#ffffff':'#ffd21f'));
+    ctx.strokeStyle=`rgba(155,231,255,${.5+.5*p})`;ctx.lineWidth=1.3;              // tia điện lách tách quanh đầu cột
+    for(let i=0;i<2+Math.floor(p*3);i++){ctx.beginPath();let x=tx,y=ty;ctx.moveTo(x,y);for(let j=0;j<3;j++){x+=rand(-7,7);y+=rand(-7,4);ctx.lineTo(x,y)}ctx.stroke()}
+  }
+  // cột sét: đường gấp khúc từ trên trời xuống, vẽ lại ngẫu nhiên mỗi khung hình nên trông giật giật như sét thật
+  for(const l of bolts){
+    const a=(1-l.t/.45)*(Math.random()<.2?.5:1);
+    const path=(x0,y0,x1,y1,n,amp)=>{const pts=[[x0,y0]];for(let i=1;i<n;i++){const f=i/n;pts.push([x0+(x1-x0)*f+rand(-amp,amp),y0+(y1-y0)*f])}pts.push([x1,y1]);return pts};
+    ctx.save();ctx.globalAlpha=Math.min(1,(1-l.t/.45)*1.5);for(const [dx,dy,sz] of [[-40,8,26],[0,0,34],[38,10,24],[-14,16,22],[20,18,22]])dot(ctx,l.x+dx,CLOUD_Y+dy,sz,'#3b3a52');ctx.restore();   // mây giông còn lại lúc sét đánh
+    const main=path(l.x+rand(-24,24),CLOUD_Y,l.x,l.y,16,20);
+    const stroke=(pts,w,col)=>{ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.lineWidth=w;ctx.strokeStyle=col;ctx.stroke()};
+    ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+    glow(ctx,'#7fd0ff',28,()=>stroke(main,12,`rgba(140,210,255,${.55*a})`));
+    stroke(main,4,`rgba(255,255,255,${a})`);
+    for(let b=0;b<3;b++){const [sx,sy]=main[3+b*4];stroke(path(sx,sy,sx+rand(-70,70),sy+rand(40,90),5,10),2,`rgba(200,235,255,${.8*a})`)}   // nhánh sét
+    ctx.globalCompositeOperation='lighter';ctx.globalAlpha=a;ctx.drawImage(SPR.frost,l.x-60,l.y-60,120,120);
+    ctx.restore();
+  }
+};
+
+// ===== BƯỚC 13: CẬP NHẬT MỖI KHUNG HÌNH =====
+const update=dt=>{
+  if(state==='menu'){if(hero)updateHero(dt);return}
+  if(state==='intro'){introT+=dt;updateAir(dt);if(introT>=INTRO_TIME)startTurn();return}
+  if(state==='phase'){phaseT+=dt;updateAir(dt);if(phaseT>PHASE_MIN+.5&&!players.some(p=>p.drop))startTurn()}
+  if(state==='victory'){win.t+=dt;if(win.t>0)updateWin(dt);if(win.t>WIN_TIME){showResult();return}}
+  msgT=Math.max(0,msgT-dt);shake=Math.max(0,shake-dt);flash=Math.max(0,flash-dt);
+  if(state==='stunned'){waitT+=dt;if(waitT>1.4){const p=cur();if(p.frozen){p.frozen=false;sfx.shatter();   // hết lượt bị đóng băng: băng vỡ
+    for(let i=0;i<18;i++)smoke.push({x:p.x+rand(-26,26),y:p.y-rand(4,40),vx:rand(-120,120),vy:rand(-200,-40),r:rand(2,5),life:rand(.6,1.1),col:'#dff6ff',grav:1})}nextTurn()}}
+  let moving=false;
+  if(state==='aim'){
+    const p=cur();
+    if(p.hp<=0)return nextTurn();
+    if(!players.some(q=>q.team!==p.team&&q.hp>0))return nextTurn();   // đối phương đã bị hạ hết (vd: rơi xuống vực) thì xử lý ngay
+    if(p.isAI)runAI(p,dt);
+    else{
+      if(keys.up)p.angle=Math.min(90,p.angle+40*dt);
+      if(keys.down)p.angle=Math.max(MIN_ANGLE,p.angle-40*dt);
+      const mv=(keys.right?1:0)-(keys.left?1:0);
+      if(charging){if(mv)p.dir=mv;p.spd=0}else if(driveTank(p,mv,dt))moving=true
+      // SỬA LỖI: Space bấm sớm (lúc đạn trước còn bay) vẫn được tính: tới lượt mà đang giữ Space thì bắt đầu nạp lực ngay
+      if(keys.fire&&!charging&&!fireLatch){charging=true;power=0}
+      if(charging&&!keys.fire&&power>0){fire()}                       // phòng trường hợp lỡ mất sự kiện nhả phím
+      else if(charging){power+=55*dt;if(power>=100){power=100;fire()}}
+    }
+  }
+  setEngine(moving);setCharge(charging&&state==='aim'?power:null);
+  updateAir(dt);
+  for(const p of players){
+    p.recoil=Math.max(0,p.recoil-dt*4);p.hitT=Math.max(0,p.hitT-dt);updateTilt(p,dt);
+    if(p!==cur())p.spd=0;
+    if(p.hp<=0&&!p.fell&&Math.random()<.12)smoke.push({x:p.x+rand(-8,8),y:p.y-18,vx:rand(-6,6)+wind*3,vy:rand(-40,-25),r:rand(5,9),life:1.4,col:'#3e3838'});   // xác xe bốc khói
+  }
+  for(const o of muzzles)o.t+=dt;muzzles=muzzles.filter(o=>o.t<.14);
+  updateCrates(dt);updateZoneFx(dt);
+  if(cutin){cutin.t+=dt;if(cutin.t>CUT_TIME)cutin=null}
+  for(const q of queue){q.t-=dt;if(q.t<=0&&!q.done){q.done=true;q.go()}}
+  queue=queue.filter(q=>!q.done);
+  // UAV: bay lên, bay ngang tới điểm đích, thả tên lửa, rồi bay đi
+  for(const d of drones){
+    d.t+=dt;const sg=Math.sign(d.tx-d.x)||1;
+    if(d.phase==='up'){d.y-=200*dt;d.x+=sg*60*dt;if(d.y<=70){d.y=70;d.phase='cruise'}}
+    else if(d.phase==='cruise'){const st=Math.min(Math.abs(d.tx-d.x),280*dt);d.x+=sg*st;
+      if(Math.abs(d.tx-d.x)<1){d.phase='leave';d.dir=sg;shells.push({x:d.x,y:d.y+12,vx:0,vy:40,kind:'uavm',owner:d.owner,fromSkill:true,age:1,trail:[]});sfx.whistle()}}
+    else{d.y-=120*dt;d.x+=d.dir*240*dt;if(d.y<-40||d.x<-60||d.x>W+60)d.dead=true}
+  }
+  drones=drones.filter(d=>!d.dead);
+  for(const b of shells){
+    b.age+=dt;const S=SHELL[b.kind];
+    if(b.kind==='seeker'){
+      if(b.lock&&b.lock.hp<=0)b.lock=null;                          // mục tiêu đã bị hạ: thôi khoá
+      if(!b.lock&&b.age>.25){b.lock=findLock(b);if(b.lock)sfx.lock()}
+    }
+    for(let i=0;i<4&&!b.dead;i++){
+      const s=dt/4;
+      if(b.lock)steer(b,s);                                           // đã khoá: lao thẳng, không còn trọng lực và gió
+      else{
+        if(!S.noWind)b.vx+=wind*WIND_FORCE*s;
+        b.vy+=GRAVITY*s;
+      }
+      b.x+=b.vx*s;b.y+=b.vy*s;
+      if(b.x<-200||b.x>W+200||b.y>H+60){b.dead=true;break}
+      const hr=HIT_R+(b.kind==='eball'?8:b.kind==='missile'||b.kind==='cluster'?4:0);
+      const hitTank=!(b.ghost&&b.age<b.ghost)&&players.some(p=>p.hp>0&&!(p===b.owner&&b.age<.15)&&Math.hypot(p.x-b.x,p.y-BODY_Y-b.y)<hr);
+      if(hitTank&&b.lock&&b.lock.hp>0&&Math.hypot(b.lock.x-b.x,b.lock.y-BODY_Y-b.y)<hr){explode(b.lock.x,b.lock.y-BODY_Y,b.kind,b.owner,b.fromSkill);b.dead=true}   // truy kích trúng đích: nổ ngay giữa thân xe, sát thương tối đa
+      else if((hitTank||b.y>=groundAt(b.x))&&b.kind==='rod'){stickRod(b);b.dead=true}     // cột thu lôi: cắm vào chứ không nổ
+      else if(hitTank||b.y>=groundAt(b.x)){explode(b.x,b.y,b.kind,b.owner,b.fromSkill);b.dead=true}
+    }
+    b.trail.push([b.x,b.y]);if(b.trail.length>30)b.trail.shift();
+    if(b.kind==='ice'&&Math.random()<.8)smoke.push({x:b.x,y:b.y,vx:rand(-10,10),vy:rand(-10,10),r:rand(1.5,3),life:.6,col:'#e6f9ff'});   // vệt tuyết
+    if(b.lock&&Math.random()<.7)smoke.push({x:b.x,y:b.y,vx:rand(-8,8),vy:rand(-12,0),r:rand(3,5),life:.5,col:'#ff8a9a'});
+    if(b.kind==='missile'&&Math.random()<.6)smoke.push({x:b.x,y:b.y,vx:rand(-10,10),vy:rand(-20,0),r:rand(4,8),life:.7});
+  }
+  shells=shells.filter(b=>!b.dead);
+  updateRods(dt);
+  for(const o of blasts)o.t+=dt;blasts=blasts.filter(o=>o.t<.7);
+  for(const o of lasers)o.t+=dt;lasers=lasers.filter(o=>o.t<.7);
+  for(const q of texts){q.life-=dt;q.y-=30*dt}texts=texts.filter(q=>q.life>0);
+  for(const q of smoke){q.life-=dt;q.x+=q.vx*dt;q.y+=q.vy*dt;if(q.grav)q.vy+=500*dt;else q.r+=10*dt}smoke=smoke.filter(q=>q.life>0);
+  for(const p of players)settle(p);
+  if(state==='fly'&&!shells.length&&!queue.length&&!blasts.length&&!lasers.length&&!drones.length&&!rods.length&&!bolts.length){
+    waitT+=dt;if(waitT>.6)nextTurn();
+  }
+};
+
+// ===== BƯỚC 14: VẼ XE TĂNG =====
+// Toạ độ cục bộ: (0,0) là điểm xe chạm đất, xe quay mặt sang phải.
+const rr=(c,x,y,w,h,r,fill)=>{c.beginPath();if(c.roundRect)c.roundRect(x,y,w,h,r);else c.rect(x,y,w,h);c.fillStyle=fill;c.fill()};
+const poly=(c,pts,fill)=>{c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=fill;c.fill()};
+const dot=(c,x,y,r,fill)=>{c.beginPath();c.arc(x,y,r,0,6.2832);c.fillStyle=fill;c.fill()};
+const glow=(c,col,blur,fn)=>{c.save();c.shadowColor=col;c.shadowBlur=blur;fn();c.restore()};
+const METAL='#3b3652',METAL_L='#5d577a',TOXIC='#7dff5a',VOLT='#9be7ff',TEAL='#2ee6c8';
+// Nòng súng của từng xe, vẽ dọc trục x
+const BARRELS={
+  rapid:(c,L,M,D)=>{rr(c,-3,-6,11,12,3,D);for(const y of [-3.2,0,3.2])rr(c,6,y-1.4,22,2.8,1.4,METAL);rr(c,13,-5.5,3,11,1.5,M);rr(c,25,-5.5,4,11,1.5,M);rr(c,25,-5.5,4,3,1.5,L)},
+  spread:(c,L,M,D)=>{rr(c,-2,-3,8,6,2,METAL);rr(c,4,-8,22,16,3,M);rr(c,4,-8,22,4,3,L);rr(c,4,4,22,4,2,D);for(const y of [-4,0,4]){dot(c,23,y,1.8,METAL);dot(c,17,y,1.8,METAL)}},
+  twin:(c,L,M,D)=>{rr(c,0,-7,8,14,2.5,D);for(const y of [-4.5,4.5]){rr(c,4,y-2,22,4,2,METAL);rr(c,4,y-2,22,1.4,1,METAL_L);rr(c,24,y-3,6,6,1.5,D)}},
+  laser:(c,L,M,D)=>{rr(c,0,-4,26,8,3.5,METAL);rr(c,0,-4,26,2.5,2,METAL_L);glow(c,'#22d3ee',8,()=>{for(let i=0;i<3;i++)rr(c,6+i*6,-5.5,3,11,1.5,i===1?L:M);dot(c,27.5,0,3.8,'#c9fbff')})},
+  flame:(c,L,M,D)=>{rr(c,-2,-4,14,8,3,METAL);poly(c,[[10,-5],[26,-8],[26,8],[10,5]],M);poly(c,[[10,-5],[26,-8],[26,-4.5],[10,-2.5]],L);rr(c,24,-7,3,14,1,'#2e2a40');glow(c,'#ffb02e',8,()=>dot(c,28,0,2.6,'#ffd24a'))},
+  poison:(c,L,M,D)=>{rr(c,0,-3.5,24,7,3,METAL);rr(c,0,-3.5,24,2,1.5,METAL_L);rr(c,8,-5,3,10,1.5,M);rr(c,14,-5,3,10,1.5,D);glow(c,TOXIC,8,()=>rr(c,22,-5,5,10,2,TOXIC))},
+  mega:(c,L,M,D)=>{rr(c,-4,-8,32,16,4,D);rr(c,-4,-8,32,5,3,M);rr(c,10,-9,4,18,2,L);poly(c,[[28,-6],[36,0],[28,6]],'#ff4d3d');poly(c,[[28,-6],[36,0],[28,-1]],'#ff8f80')},
+  electric:(c,L,M,D)=>{rr(c,0,-3,20,6,3,METAL);for(let i=0;i<4;i++)rr(c,4+i*4.5,-5,2.5,10,1.2,i%2?L:D);glow(c,VOLT,12,()=>{dot(c,24,0,5.5,VOLT);dot(c,24,0,2.6,'#ffffff')})},
+  cluster:(c,L,M,D)=>{rr(c,-2,-7,22,14,4,D);rr(c,-2,-7,22,4,3,M);for(const x of [4,10])rr(c,x,-8,3,16,1.5,L);rr(c,18,-8.5,7,17,2,M);rr(c,24,-6,2,12,1,'#2e2a40')},
+  ice:(c,L,M,D)=>{rr(c,0,-4,22,8,3.5,'#5b7fa6');rr(c,0,-4,22,2.5,2,'#8fb3d6');for(const x of [6,12])rr(c,x,-5.5,3,11,1.5,L);glow(c,'#bdf2ff',12,()=>poly(c,[[22,0],[27,-5],[33,0],[27,5]],'#e8fbff'))},
+  seeker:(c,L,M,D)=>{rr(c,-2,-6,28,12,3,D);rr(c,-2,-6,28,4,2,M);rr(c,6,-7,3,14,1.5,L);rr(c,14,-7,3,14,1.5,L);poly(c,[[26,-5],[32,0],[26,5]],'#ff3b5c');glow(c,'#ff3b5c',8,()=>dot(c,29,0,1.6,'#ffd0d8'))},
+  tech:(c,L,M,D)=>{rr(c,0,-2.5,26,5,2.5,METAL);rr(c,0,-2.5,26,1.6,1,METAL_L);glow(c,TEAL,8,()=>rr(c,18,-4,8,8,2,TEAL))}
+};
+// Tháp pháo của từng xe
+const TURRETS={
+  rapid:(c,L,M,D)=>{rr(c,-13,-32,25,11,4,M);rr(c,-13,-32,25,3.5,3,L);dot(c,-6,-32,3,D);rr(c,-1,-36,2,5,1,D)},
+  spread:(c,L,M,D)=>{rr(c,-15,-30,24,9,3,M);rr(c,-15,-30,24,3,2,L);c.strokeStyle=D;c.lineWidth=1.6;c.beginPath();c.moveTo(-11,-30);c.lineTo(-13,-40);c.stroke();dot(c,-13,-40,2,'#ff5a5a')},
+  twin:(c,L,M,D)=>{poly(c,[[-15,-21],[11,-21],[15,-27],[9,-34],[-10,-34],[-16,-28]],M);poly(c,[[-10,-34],[9,-34],[11,-31],[-12,-31]],L);rr(c,-6,-29,8,3,1.5,D);c.strokeStyle=METAL;c.lineWidth=1.4;c.beginPath();c.moveTo(-9,-34);c.lineTo(-11,-45);c.stroke();dot(c,-11,-45,1.8,L)},
+  laser:(c,L,M,D)=>{c.beginPath();c.arc(0,-21,12,Math.PI,0);c.fillStyle=M;c.fill();c.beginPath();c.arc(0,-21,12,Math.PI,Math.PI*1.45);c.lineTo(0,-21);c.fillStyle=L;c.fill();dot(c,4,-26,4.2,'#e8fdff');dot(c,5.2,-27,1.6,'#fff')},
+  flame:(c,L,M,D)=>{rr(c,-13,-31,22,10,4,M);rr(c,-13,-31,22,3,2,L);rr(c,-23,-35,10,15,4,'#ffd24a');rr(c,-23,-29,10,3,0,'#2e2a40');rr(c,-23,-35,10,3,2,'#fff0a8')},
+  poison:(c,L,M,D)=>{rr(c,-13,-31,22,10,5,M);rr(c,-13,-31,22,3,3,L);rr(c,-9,-44,10,3,1,METAL);glow(c,TOXIC,10,()=>rr(c,-8,-42,8,12,3,TOXIC));dot(c,-5,-36,1.4,'#e6ffd6')},
+  mega:(c,L,M,D)=>{rr(c,-17,-34,28,13,3,M);rr(c,-17,-34,28,4,2,L);for(const x of [-12,-7,-2])rr(c,x,-28,3,5,1,D)},
+  electric:(c,L,M,D)=>{rr(c,-13,-31,24,10,4,M);rr(c,-13,-31,24,3,2,L);rr(c,-7,-43,4,12,2,METAL);for(const y of [-40,-36])rr(c,-9,y,8,2,1,D);glow(c,VOLT,10,()=>dot(c,-5,-45,3.6,VOLT))},
+  cluster:(c,L,M,D)=>{c.beginPath();c.arc(-2,-22,12,Math.PI,0);c.fillStyle=M;c.fill();c.beginPath();c.arc(-2,-22,12,Math.PI,Math.PI*1.4);c.lineTo(-2,-22);c.fillStyle=L;c.fill();for(const x of [-16,-11,-6])dot(c,x,-34+Math.abs(x+11)*.3,2.6,'#ff8a1f');rr(c,-18,-37,14,3,1.5,METAL)},
+  ice:(c,L,M,D)=>{rr(c,-14,-31,24,10,5,M);rr(c,-14,-31,24,3,3,L);for(const [x,h] of [[-10,9],[-5,14],[1,8]]){poly(c,[[x-2.5,-30],[x,-30-h],[x+2.5,-30]],'#e8fbff');poly(c,[[x,-30-h],[x+2.5,-30],[x+.5,-30]],'#9fd6f0')}glow(c,'#bdf2ff',8,()=>dot(c,6,-26,1.8,'#fff'))},
+  seeker:(c,L,M,D)=>{poly(c,[[-16,-21],[12,-21],[15,-26],[10,-33],[-12,-33],[-17,-27]],M);poly(c,[[-12,-33],[10,-33],[12,-30],[-14,-30]],L);rr(c,-10,-28,14,4,2,'#1a1d36');glow(c,'#ff3b5c',10,()=>rr(c,-2,-27.5,5,3,1.5,'#ff3b5c'));c.strokeStyle=METAL;c.lineWidth=1.4;c.beginPath();c.moveTo(-12,-33);c.lineTo(-14,-42);c.moveTo(-9,-33);c.lineTo(-9,-39);c.stroke()},
+  tech:(c,L,M,D)=>{poly(c,[[-15,-21],[12,-21],[14,-28],[-12,-30]],M);poly(c,[[-12,-30],[14,-28],[13.5,-26],[-12.5,-27.5]],L);
+    c.strokeStyle=METAL;c.lineWidth=1.6;c.beginPath();c.moveTo(-8,-29);c.lineTo(-8,-35);c.stroke();
+    c.beginPath();c.arc(-8,-37,6,Math.PI*.15,Math.PI*1.15);c.fillStyle=D;c.fill();glow(c,TEAL,6,()=>dot(c,8,-25,1.8,TEAL))}
+};
+// Thân xe: 4 kiểu, dùng chung cho nhiều xe
+const HULLS={
+  a:(c,L,M,D)=>{poly(c,[[-28,-12],[26,-12],[22,-22],[-24,-22]],M);poly(c,[[-24,-22],[22,-22],[23.4,-19],[-25.4,-19]],L);
+    c.strokeStyle=D;c.lineWidth=2;for(const x of [-10,-3,4]){c.beginPath();c.moveTo(x,-18);c.lineTo(x+3,-15.5);c.lineTo(x,-13);c.stroke()}dot(c,19,-17,1.8,'#fff3b0')},
+  b:(c,L,M,D)=>{poly(c,[[-27,-12],[25,-12],[25,-19],[17,-23],[-27,-23]],M);poly(c,[[-27,-23],[17,-23],[20,-21.5],[-27,-20]],L);rr(c,-21,-19,16,5,2,D);rr(c,-1,-19,10,5,2,D)},
+  c:(c,L,M,D)=>{poly(c,[[-27,-12],[26,-12],[20,-21],[-22,-21],[-27,-17]],M);poly(c,[[-22,-21],[20,-21],[21.5,-18.5],[-24,-18.5]],L);poly(c,[[8,-17],[16,-17],[13,-13],[5,-13]],D);poly(c,[[-6,-17],[2,-17],[-1,-13],[-9,-13]],D)},
+  d:(c,L,M,D)=>{poly(c,[[-27,-12],[26,-12],[23,-19],[-20,-21],[-27,-17]],M);poly(c,[[-20,-21],[23,-19],[23.6,-17],[-22,-18.6]],L);rr(c,-18,-16,30,2.5,1.2,D)}
+};
+const drawTankArt=(c,T,ang,recoil=0,wheel=0)=>{
+  const [L,M,D]=T.pal;
+  c.save();c.translate(PIV.x,-PIV.y);c.rotate(-ang*Math.PI/180);c.translate(-recoil*5,0);BARRELS[T.skill](c,L,M,D);c.restore();
+  TURRETS[T.skill](c,L,M,D);
+  HULLS[T.hull](c,L,M,D);
+  rr(c,-28,-13,54,13,6.5,'#2e2a40');rr(c,-25,-12.5,48,3,1.5,'#4a4563');
+  const lo=((wheel%6)+6)%6;for(let x=-24+lo;x<22;x+=6){rr(c,x,-13,2.6,2,1,'#6a6488');rr(c,x,-1.6,2.6,1.6,.8,'#45405c')}   // mắt xích chạy theo bánh
+  const wa=wheel/4.2;c.strokeStyle='#a19bc0';c.lineWidth=1.4;
+  for(let i=0;i<5;i++){const x=-19+i*9.5;dot(c,x,-6,4.2,'#57516f');c.beginPath();c.moveTo(x-Math.cos(wa)*3,-6-Math.sin(wa)*3);c.lineTo(x+Math.cos(wa)*3,-6+Math.sin(wa)*3);c.stroke();dot(c,x,-6,1.3,'#a19bc0')}
+  rr(c,-28,-15,54,2.6,1.3,D);
+};
+const drawTank=(p,active)=>{
+  if(p.drop&&p.hp>0)drawChute(p);
+  if(p.hp<=0){                                                   // xác xe: màu xám, nòng gục xuống
+    if(p.fell)return;
+    p.wreck=p.wreck||{skill:p.T.skill,hull:p.T.hull,pal:['#77707c','#4f4956','#2f2b35']};
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.tilt);ctx.scale(p.dir,1);drawTankArt(ctx,p.wreck,-15+p.dir*p.tilt*57.3,0,p.wheel);ctx.restore();return;
+  }
+  ctx.save();ctx.translate(p.x,p.y);
+  if(p.hitT>0){ctx.translate(rand(-2,2),0);ctx.globalAlpha=Math.floor(p.hitT*24)%2?.45:1}       // trúng đạn: rung và nhấp nháy
+  if(p.boost>0){ctx.strokeStyle='rgba(63,224,224,.7)';ctx.lineWidth=2;for(let i=0;i<3;i++){const o=(performance.now()/40+i*9)%26;ctx.beginPath();ctx.moveTo(-p.dir*(28+o),-8-i*6);ctx.lineTo(-p.dir*(40+o),-8-i*6);ctx.stroke()}}
+  const bump=Math.abs(Math.sin(p.wheel*.35))*Math.min(1,Math.abs(p.spd)/50)*1.3;     // thân xe nhún khi chạy
+  const bAng=p.angle+p.dir*p.tilt*57.3;                                              // bù độ nghiêng để nòng vẫn đúng góc đã chỉnh
+  ctx.save();ctx.rotate(p.tilt);ctx.translate(-p.dir*p.recoil*2.5,-bump);ctx.scale(p.dir,1);drawTankArt(ctx,p.T,bAng,p.recoil,p.wheel);
+  if(p.useSkill){                                                    // bật kỹ năng: nòng phát sáng nhấp nháy
+    const k=.6+.4*Math.sin(performance.now()/90);
+    ctx.save();ctx.translate(PIV.x,-PIV.y);ctx.rotate(-bAng*Math.PI/180);ctx.lineCap='round';
+    glow(ctx,p.T.pal[0],22,()=>{ctx.strokeStyle=`rgba(255,255,255,${.5*k})`;ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(2,0);ctx.lineTo(BARREL+2,0);ctx.stroke()});
+    glow(ctx,'#fff',16,()=>dot(ctx,BARREL+3,0,4+3*k,p.T.pal[0]));ctx.restore();
+  }
+  ctx.restore();
+  if(p.shield>0){ctx.globalAlpha*=.9;dot(ctx,0,-16,34,'rgba(79,163,255,.18)');ctx.strokeStyle=`rgba(140,200,255,${.6+.3*Math.sin(performance.now()/200)})`;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,-16,34,0,6.29);ctx.stroke()}
+  ctx.globalAlpha=1;
+  ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(-24,-56,48,6);
+  ctx.fillStyle=p.hp/p.maxHp>.4?'#5ce05c':'#ff5a36';ctx.fillRect(-24,-56,48*p.hp/p.maxHp,6);
+  ctx.fillStyle='#ffd84a';ctx.fillRect(-24,-49,48*p.energy/100,2.5);
+  ctx.fillStyle='#fff';ctx.font='700 13px "Baloo 2",sans-serif';ctx.textAlign='center';ctx.fillText(p.name,0,-62);
+  if(p.frozen){                                                       // khối băng bao quanh xe
+    ctx.save();ctx.rotate(p.tilt);
+    rr(ctx,-33,-48,66,50,7,'rgba(190,236,255,.5)');ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=2;ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-24,-40);ctx.lineTo(-10,-40);ctx.moveTo(-26,-32);ctx.lineTo(-20,-32);ctx.stroke();
+    ctx.strokeStyle='rgba(120,190,230,.7)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(8,-48);ctx.lineTo(14,-30);ctx.lineTo(6,-18);ctx.moveTo(14,-30);ctx.lineTo(26,-24);ctx.stroke();
+    ctx.restore();
+  }
+  if(p.stun){ctx.fillStyle='#ffd21f';poly(ctx,[[30,-46],[24,-34],[29,-34],[25,-24],[34,-38],[29,-38]],'#ffd21f')}
+  if(p.slow)for(let i=0;i<3;i++)dot(ctx,-30+i*5,-30-((performance.now()/200+i*7)%14),2,TOXIC);
+  if(active){ctx.fillStyle='#ffd84a';ctx.beginPath();ctx.moveTo(-6,-84);ctx.lineTo(6,-84);ctx.lineTo(0,-76);ctx.fill()}
+  ctx.restore();
+};
+
+// ===== BƯỚC 15: VẼ ĐẠN, UAV, VÙNG HIỆU ỨNG, TRANG TRÍ =====
+const drawShell=b=>{
+  ctx.save();ctx.translate(b.x,b.y);
+  if(b.kind==='barrel'){ctx.rotate(b.age*8);rr(ctx,-6,-8,12,16,3,'#e83b2e');rr(ctx,-6,-2,12,4,0,'#ffd24a');rr(ctx,-6,-8,12,3,2,'#ff8a7d')}
+  else if(b.kind==='poison'){glow(ctx,TOXIC,14,()=>dot(ctx,0,0,7,'#5fd35a'));dot(ctx,-2,-2,2.5,'#d8ffc8')}
+  else if(b.kind==='seeker'){
+    ctx.rotate(Math.atan2(b.vy,b.vx));
+    if(b.lock)poly(ctx,[[-10,-3],[-18-Math.random()*6,0],[-10,3]],'#ff8a3a');
+    rr(ctx,-10,-3.5,18,7,3,'#2b3058');rr(ctx,-10,-3.5,18,2.5,1.5,'#6a73b0');
+    glow(ctx,'#ff3b5c',b.lock?14:6,()=>poly(ctx,[[8,-3.5],[14,0],[8,3.5]],'#ff3b5c'));
+    poly(ctx,[[-10,-3.5],[-13,-8],[-5,-3.5]],'#454d82');poly(ctx,[[-10,3.5],[-13,8],[-5,3.5]],'#454d82');
+  }
+  else if(b.kind==='missile'||b.kind==='uavm'){
+    ctx.rotate(Math.atan2(b.vy,b.vx));const s=b.kind==='missile'?1:.6;ctx.scale(s,s);
+    poly(ctx,[[-18,-4],[-26,-8-Math.random()*3],[-30,0],[-26,8+Math.random()*3]],'#ffb02e');
+    rr(ctx,-18,-5,28,10,4,'#eef1f7');rr(ctx,-18,-5,28,3,2,'#ffffff');poly(ctx,[[10,-5],[20,0],[10,5]],'#ff4d3d');
+    poly(ctx,[[-18,-5],[-22,-11],[-12,-5]],'#4a78e0');poly(ctx,[[-18,5],[-22,11],[-12,5]],'#4a78e0');
+  }
+  else if(b.kind==='rod'){
+    ctx.rotate(Math.atan2(b.vy,b.vx));rr(ctx,-12,-1.6,22,3.2,1.6,'#cfd6e6');
+    poly(ctx,[[-12,-1.6],[-16,-6],[-8,-1.6]],'#c98f00');poly(ctx,[[-12,1.6],[-16,6],[-8,1.6]],'#c98f00');
+    glow(ctx,'#ffd21f',10,()=>dot(ctx,11,0,3.2,'#ffe66a'));
+  }
+  else if(b.kind==='cluster'){
+    ctx.rotate(b.age*5);dot(ctx,0,0,9,'#3a3a2a');
+    for(let i=0;i<4;i++){ctx.rotate(Math.PI/2);rr(ctx,-2,-9,4,18,2,'#8f9e45')}
+    dot(ctx,-3,-3,3,'#a9ae80');glow(ctx,'#ff8a1f',8,()=>dot(ctx,0,0,2.5,'#ffb04a'));
+  }
+  else if(b.kind==='bomblet'){dot(ctx,0,0,4.5,'#2e2a20');dot(ctx,-1.5,-1.5,1.6,'#8f9e45');glow(ctx,'#ff8a1f',6,()=>dot(ctx,0,-4.5,1.4,'#ffd24a'))}
+  else if(b.kind==='ice'){
+    ctx.rotate(b.age*6);glow(ctx,'#bdf2ff',14,()=>poly(ctx,[[0,-8],[6,0],[0,8],[-6,0]],'#e8fbff'));poly(ctx,[[0,-8],[6,0],[0,0]],'#9fd6f0');
+    ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=1.2;ctx.beginPath();for(let i=0;i<3;i++){const a=i*Math.PI/3;ctx.moveTo(Math.cos(a)*11,Math.sin(a)*11);ctx.lineTo(-Math.cos(a)*11,-Math.sin(a)*11)}ctx.stroke();
+  }
+  else if(b.kind==='eball'){
+    glow(ctx,VOLT,22,()=>dot(ctx,0,0,10,VOLT));dot(ctx,0,0,5,'#fff');
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.beginPath();
+    for(let i=0;i<3;i++){const a=Math.random()*6.28;ctx.moveTo(Math.cos(a)*6,Math.sin(a)*6);ctx.lineTo(Math.cos(a+.4)*12,Math.sin(a+.4)*12);ctx.lineTo(Math.cos(a)*16,Math.sin(a)*16)}ctx.stroke();
+  }
+  else{const r=b.kind==='normal'||b.kind==='twin'?5:4;dot(ctx,0,0,r,'#2e2a40');dot(ctx,-1.5,-1.5,r*.4,'#8f89ad')}
+  ctx.restore();
+};
+const drawDrone=d=>{
+  ctx.save();ctx.translate(d.x,d.y);
+  const sp=performance.now()/30;
+  rr(ctx,-14,-4,28,8,4,'#d6deeb');rr(ctx,-14,-4,28,3,2,'#fff');rr(ctx,-4,4,8,4,2,'#8391ab');
+  glow(ctx,TEAL,6,()=>dot(ctx,10,0,2,TEAL));
+  ctx.strokeStyle='#3b3652';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-14,-2);ctx.lineTo(-18,-8);ctx.moveTo(14,-2);ctx.lineTo(18,-8);ctx.stroke();
+  ctx.fillStyle='rgba(60,54,82,.6)';for(const x of [-18,18]){const w=10*Math.abs(Math.sin(sp));ctx.fillRect(x-w,-10,w*2,2)}
+  if(d.phase==='cruise'){ctx.fillStyle='rgba(46,230,200,.25)';ctx.beginPath();ctx.moveTo(-6,6);ctx.lineTo(6,6);ctx.lineTo(14,groundAt(d.x)-d.y);ctx.lineTo(-14,groundAt(d.x)-d.y);ctx.fill()}
+  ctx.restore();
+};
+// Vùng lửa / vùng độc vẽ bằng hệ thống hạt: mỗi khung hình sinh hạt mới, hạt bay lên, nhỏ dần và mờ dần.
+// "Sprite" là ảnh tròn mờ vẽ sẵn 1 lần, rồi vẽ lại thật nhiều lần với kích thước khác nhau, nhanh hơn tô gradient từng hạt.
+const sprite=(r,stops)=>{const c=document.createElement('canvas');c.width=c.height=r*2;const g=c.getContext('2d'),gr=g.createRadialGradient(r,r,0,r,r,r);for(const [o,col] of stops)gr.addColorStop(o,col);g.fillStyle=gr;g.fillRect(0,0,r*2,r*2);return c};
+const SPR={
+  fire :sprite(32,[[0,'rgba(255,252,220,1)'],[.22,'rgba(255,214,90,.95)'],[.5,'rgba(255,110,30,.55)'],[1,'rgba(190,30,0,0)']]),
+  smoke:sprite(32,[[0,'rgba(60,52,50,.5)'],[.6,'rgba(60,52,50,.22)'],[1,'rgba(60,52,50,0)']]),
+  gas  :sprite(32,[[0,'rgba(170,255,110,.55)'],[.45,'rgba(100,210,70,.32)'],[1,'rgba(60,150,40,0)']]),
+  frost:sprite(32,[[0,'rgba(255,255,255,.95)'],[.4,'rgba(190,240,255,.6)'],[1,'rgba(130,210,255,0)']])
+};
+let zp=[];   // hạt của vùng hiệu ứng
+const zoneX=Z=>Math.round((Math.random()+Math.random()-1)*Z.r);   // tập trung ở giữa vùng, thưa dần ra mép
+const updateZoneFx=dt=>{
+  for(const z of zones){
+    const Z=ZONES[z.kind],k=Math.min(1,.35+z.life*.25);           // vùng sắp tắt thì yếu dần
+    const emit=(rate,fn)=>{let n=rate*dt*k;while(n>0){if(Math.random()<n)fn();n--}};
+    if(z.kind==='fire'){
+      emit(95,()=>{const x=z.x+zoneX(Z),gy=groundAt(x);if(gy>H)return;const l=rand(.4,.9);zp.push({t:'flame',x,y:gy+2,vx:rand(-12,12)+wind*4,vy:rand(-115,-60),life:l,max:l,r:rand(11,21)})});
+      emit(9,()=>{const x=z.x+zoneX(Z),gy=groundAt(x);if(gy>H)return;const l=rand(1.6,2.6);zp.push({t:'smk',x,y:gy-26,vx:wind*6+rand(-6,6),vy:rand(-30,-18),life:l,max:l,r:rand(12,18)})});
+      emit(10,()=>{const x=z.x+zoneX(Z),gy=groundAt(x);if(gy>H)return;const l=rand(.8,1.5);zp.push({t:'ember',x,y:gy-6,vx:rand(-25,25)+wind*5,vy:rand(-120,-70),life:l,max:l,r:rand(1.2,2.2),ph:rand(0,6)})});
+    }else{
+      emit(12,()=>{const x=z.x+zoneX(Z),gy=groundAt(x);if(gy>H)return;const l=rand(2.2,3.4);zp.push({t:'gas',x,y:gy-rand(2,18),vx:wind*3+rand(-9,9),vy:rand(-12,-3),life:l,max:l,r:rand(16,26),ph:rand(0,6)})});
+      emit(7,()=>{const x=z.x+zoneX(Z)*.8,gy=groundAt(x);if(gy>H)return;const l=rand(.5,1);zp.push({t:'bub',x,y:gy+1,vx:0,vy:rand(-14,-6),life:l,max:l,r:rand(2,4.5)})});
+    }
+  }
+  for(const q of zp){
+    q.life-=dt;q.x+=q.vx*dt;q.y+=q.vy*dt;
+    if(q.t==='flame'){q.vy-=40*dt;q.vx*=.98}
+    else if(q.t==='smk'){q.r+=14*dt}
+    else if(q.t==='ember'){q.ph+=dt*8;q.x+=Math.sin(q.ph)*20*dt}
+    else if(q.t==='gas'){q.r+=7*dt;q.ph+=dt;q.x+=Math.sin(q.ph)*8*dt}
+  }
+  zp=zp.filter(q=>q.life>0);
+};
+const zoneGroundPath=(z,Z)=>{ctx.beginPath();let on=false;for(let x=z.x-Z.r;x<=z.x+Z.r;x+=4){const gy=groundAt(x);if(gy>H){on=false;continue}on?ctx.lineTo(x,gy+1):ctx.moveTo(x,gy+1);on=true}};
+const drawZones=()=>{
+  const now=performance.now()/1000;
+  // 1. mặt đất trong vùng: cháy sém / vũng độc
+  for(const z of zones){
+    const Z=ZONES[z.kind],a=Math.min(1,.4+z.life*.2);ctx.lineCap='round';ctx.lineJoin='round';
+    if(z.kind==='fire'){
+      zoneGroundPath(z,Z);ctx.strokeStyle=`rgba(40,14,6,${.55*a})`;ctx.lineWidth=9;ctx.stroke();
+      ctx.save();ctx.globalCompositeOperation='lighter';
+      zoneGroundPath(z,Z);ctx.strokeStyle=`rgba(255,${120+40*Math.sin(now*9)},30,${.5*a})`;ctx.lineWidth=4;ctx.stroke();      // than hồng lấp lánh
+      const gy=Math.min(groundAt(z.x),H);ctx.globalAlpha=.35*a;ctx.drawImage(SPR.fire,z.x-Z.r*1.1,gy-Z.r*.55,Z.r*2.2,Z.r*1.1);   // quầng sáng toả lên
+      ctx.restore();
+    }else{
+      zoneGroundPath(z,Z);ctx.strokeStyle=`rgba(70,170,40,${.65*a})`;ctx.lineWidth=10;ctx.stroke();
+      zoneGroundPath(z,Z);ctx.strokeStyle=`rgba(190,255,140,${.55*a})`;ctx.lineWidth=2;ctx.save();ctx.translate(0,-3);ctx.stroke();ctx.restore();   // mặt vũng độc bóng loáng
+      ctx.globalAlpha=.25*a;const gy=Math.min(groundAt(z.x),H);ctx.drawImage(SPR.gas,z.x-Z.r*1.2,gy-40,Z.r*2.4,60);ctx.globalAlpha=1;   // sương độc sát mặt đất
+    }
+  }
+  // 2. hạt: khói và khí độc vẽ bình thường, lửa và tàn lửa vẽ kiểu "cộng sáng"
+  for(const q of zp){
+    const f=q.life/q.max;
+    if(q.t==='smk'){ctx.globalAlpha=Math.min(1,f*1.2)*(1-f*.3);ctx.drawImage(SPR.smoke,q.x-q.r,q.y-q.r,q.r*2,q.r*2)}
+    else if(q.t==='gas'){ctx.globalAlpha=Math.sin(Math.PI*f)*.9;ctx.drawImage(SPR.gas,q.x-q.r,q.y-q.r,q.r*2,q.r*2)}
+    else if(q.t==='bub'){ctx.globalAlpha=f;ctx.strokeStyle='#c8ff9e';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(q.x,q.y,q.r*(1.4-f*.4),0,6.29);ctx.stroke()}
+  }
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(const q of zp){
+    const f=q.life/q.max;
+    if(q.t==='flame'){const r=q.r*(.35+f*.75);ctx.globalAlpha=Math.min(1,f*1.6);ctx.drawImage(SPR.fire,q.x-r,q.y-r*1.3,r*2,r*2.6)}
+    else if(q.t==='ember'){ctx.globalAlpha=f;dot(ctx,q.x,q.y,q.r,'#ffc24a')}
+  }
+  ctx.restore();ctx.globalAlpha=1;
+};
+const drawDecor=d=>{
+  const gy=groundAt(d.x);if(gy>H)return;
+  const c=ctx;c.save();c.translate(d.x,gy+3);c.scale(d.s*d.flip,d.s);
+  const [L1,L2,,L4]=theme.layers;
+  if(d.type==='cactus'){rr(c,-4,-34,8,34,4,'#4f9a4a');rr(c,-4,-34,3,34,2,'#73bd5f');rr(c,-14,-26,4,13,2,'#4f9a4a');rr(c,-14,-16,12,4,2,'#4f9a4a');rr(c,4,-30,4,14,2,'#4f9a4a');rr(c,2,-19,10,4,2,'#4f9a4a')}
+  else if(d.type==='rock'){poly(c,[[-11,0],[-8,-9],[0,-13],[10,-8],[12,0]],L4);poly(c,[[-8,-9],[0,-13],[10,-8],[2,-7]],L2)}
+  else if(d.type==='tuft'){for(const [x,h] of [[-5,10],[0,14],[5,9]])poly(c,[[x-2.5,0],[x+1,-h],[x+2.5,0]],'#5fae47')}
+  else if(d.type==='tree'){rr(c,-2,-18,4,18,2,'#7a4a2a');dot(c,0,-28,12,'#4fa64a');dot(c,-3,-31,7,'#6cc35a')}
+  else if(d.type==='pine'){rr(c,-2,-10,4,10,1,'#6a4a3a');for(const [y,w] of [[-10,12],[-20,9],[-29,6]]){poly(c,[[-w,y],[0,y-14],[w,y]],'#3f7d5a');poly(c,[[-w*.4,y-8],[0,y-14],[w*.4,y-8]],'#fff')}}
+  else if(d.type==='palm'){c.strokeStyle='#9a6a42';c.lineWidth=4;c.beginPath();c.moveTo(0,0);c.quadraticCurveTo(6,-20,2,-38);c.stroke();
+    for(const a of [-2.6,-2,-1.2,-.5])poly(c,[[2,-38],[2+Math.cos(a)*22,-38+Math.sin(a)*10+8],[2+Math.cos(a)*10,-38+Math.sin(a)*4]],'#3fae4f')}
+  c.restore();
+};
+// Đất nhiều tầng: mỗi tầng là mặt đất dịch xuống một đoạn, tầng sau đè lên tầng trước
+const STRATA=[0,7,42,100,170];
+const drawGround=()=>{
+  for(let i=0;i<STRATA.length;i++){
+    ctx.beginPath();ctx.moveTo(0,H+80);
+    for(let x=0;x<W;x+=2)ctx.lineTo(x,ground[x]>H?H+80:ground[x]+STRATA[i]);
+    ctx.lineTo(W,ground[W-1]>H?H+80:ground[W-1]+STRATA[i]);ctx.lineTo(W,H+80);ctx.closePath();
+    ctx.fillStyle=theme.layers[i];ctx.fill();
+  }
+};
+
+// ===== BƯỚC 16: VẼ CẢ KHUNG HÌNH =====
+const drawAimGuide=p=>{
+  const m=muzzle(p),k=p.T.skill;
+  if(p.useSkill&&k==='laser'){
+    for(let i=1;i<=14;i++){ctx.globalAlpha=1-i/15;dot(ctx,m.x+Math.cos(m.a)*p.dir*i*14,m.y-Math.sin(m.a)*i*14,3,'#7ff3ff')}
+    ctx.globalAlpha=1;return;
+  }
+  const pw=charging?Math.max(power,15):(p.lastPower??60);
+  if(p.useSkill&&k==='tech'){                                          // UAV: hiện điểm sẽ thả tên lửa
+    const tx=uavTarget(p,pw),gy=Math.min(groundAt(tx),H);
+    ctx.strokeStyle='rgba(46,230,200,.9)';ctx.lineWidth=2;ctx.setLineDash([6,6]);
+    ctx.beginPath();ctx.moveTo(tx,70);ctx.lineTo(tx,gy);ctx.stroke();ctx.setLineDash([]);
+    ctx.beginPath();ctx.arc(tx,gy-6,12,0,6.29);ctx.moveTo(tx-18,gy-6);ctx.lineTo(tx+18,gy-6);ctx.stroke();
+    return;
+  }
+  const v=pw/100*MAX_SPEED;
+  let x=m.x,y=m.y,vx=Math.cos(m.a)*v*p.dir,vy=-Math.sin(m.a)*v;
+  for(let i=0;i<12;i++){
+    for(let j=0;j<3;j++){const s=.015;vy+=GRAVITY*s;x+=vx*s;y+=vy*s}
+    if(x<0||x>=W||y>=groundAt(x))break;
+    ctx.globalAlpha=1-i/12;dot(ctx,x,y,3,'#fff');
+  }
+  ctx.globalAlpha=1;
+};
+const draw=()=>{
+  ctx.save();
+  if(shake>0)ctx.translate(rand(-.5,.5)*20*shake,rand(-.5,.5)*20*shake);
+  ctx.drawImage(bgCanvas,0,0);
+  drawAir();
+  if(theme.water){ctx.fillStyle='#2f86d6';ctx.fillRect(-20,H-46,W+40,70);ctx.fillStyle='rgba(255,255,255,.35)';for(let x=-40;x<W;x+=40)ctx.fillRect(x+(performance.now()/40%40),H-46,18,3)}
+  drawGround();
+  for(const d of decor)drawDecor(d);
+  drawZones();
+  players.forEach((p,i)=>drawTank(p,i===turn&&state==='aim'));
+  if(state==='aim'&&cur()&&!cur().isAI&&cur().hp>0)drawAimGuide(cur());
+  if(state==='aim'&&charging&&cur()){const m=muzzle(cur());glow(ctx,'#ffd84a',14,()=>dot(ctx,m.x,m.y,3+power/100*6+Math.sin(performance.now()/60)*1.2,'rgba(255,224,110,.85)'))}   // đầu nòng phát sáng khi nạp lực
+  for(const o of muzzles){const k=1-o.t/.14;ctx.save();ctx.translate(o.x,o.y);ctx.scale(o.dir,1);ctx.rotate(-o.a);
+    poly(ctx,[[0,-7*k],[18*k+6,0],[0,7*k],[4,0]],'rgba(255,200,60,'+k+')');dot(ctx,2,0,6*k,'rgba(255,250,210,'+k+')');ctx.restore()}
+  for(const b of shells){
+    if(b.kind!=='missile'&&b.kind!=='uavm'){ctx.strokeStyle=b.lock?'rgba(255,90,110,.7)':'rgba(255,255,255,.55)';ctx.lineWidth=2;ctx.beginPath();for(const [x,y] of b.trail)ctx.lineTo(x,y);ctx.stroke()}
+    drawShell(b);
+  }
+  for(const b of shells){                                             // đạn truy kích đã khoá: vạch đỏ + tâm ngắm quay quanh mục tiêu
+    if(!b.lock)continue;const t=b.lock,ty=t.y-BODY_Y,r=26,a=performance.now()/300;
+    ctx.strokeStyle='rgba(255,59,92,.55)';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(t.x,ty);ctx.stroke();ctx.setLineDash([]);
+    ctx.strokeStyle='#ff3b5c';ctx.lineWidth=3;
+    for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(t.x,ty,r,a+i*Math.PI/2,a+i*Math.PI/2+.7);ctx.stroke()}
+    dot(ctx,t.x,ty,2.5,'#ff3b5c');
+  }
+  for(const d of drones)drawDrone(d);
+  drawRods();
+  for(const c of crates)drawCrate(c);
+  for(const o of lasers){
+    const k=1-o.t/.7;ctx.lineCap='round';
+    glow(ctx,'#22d3ee',20,()=>{ctx.strokeStyle=`rgba(34,211,238,${k})`;ctx.lineWidth=12*k+2;ctx.beginPath();ctx.moveTo(o.x1,o.y1);ctx.lineTo(o.x2,o.y2);ctx.stroke()});
+    ctx.strokeStyle=`rgba(255,255,255,${k})`;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(o.x1,o.y1);ctx.lineTo(o.x2,o.y2);ctx.stroke();
+  }
+  for(const q of smoke){ctx.globalAlpha=q.grav?Math.min(1,q.life*2):Math.min(.6,q.life*.6);dot(ctx,q.x,q.y,q.r,q.col||'#8a7a70')}
+  ctx.globalAlpha=1;drawMotes();
+  ctx.globalAlpha=1;
+  for(const o of blasts){const k=o.t/.7;dot(ctx,o.x,o.y,o.r*(.6+k*.8),`rgba(${o.col},${1-k})`);dot(ctx,o.x,o.y,o.r*(.3+k*.5),`rgba(255,250,220,${(1-k)*.8})`)}
+  for(const q of texts){ctx.globalAlpha=Math.min(1,q.life);ctx.fillStyle=q.col||'#ff3b2f';ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.font='800 22px "Baloo 2",sans-serif';ctx.textAlign='center';ctx.strokeText(q.txt,q.x,q.y);ctx.fillText(q.txt,q.x,q.y)}
+  ctx.globalAlpha=1;
+  if(flash>0){ctx.fillStyle=`rgba(255,80,40,${flash})`;ctx.fillRect(-20,-20,W+40,H+40)}
+  if(whiteFlash>0){ctx.fillStyle=`rgba(235,245,255,${whiteFlash})`;ctx.fillRect(-20,-20,W+40,H+40)}   // chớp trắng khi sét đánh
+  ctx.restore();
+  if(players.length&&state!=='intro')drawHud();
+  if(state==='intro')drawIntro();
+  if(cutin)drawCutin();
+  if(state==='victory'&&win.t>0)drawWin();
+  if(state==='phase')drawPhase();
+};
+
+// ===== BƯỚC 17: HUD (thanh máu kiểu VS, năng lượng, gió, lực) =====
+const box=(x,y,w,h,r,col)=>rr(ctx,x,y,w,h,r,col);
+const ebar=(x,y,w,h,v,right)=>{
+  box(x,y,w,h,h/2,'#1b0f22');const ew=w*v/100;
+  if(v>=100)glow(ctx,'#ffd84a',8+6*Math.sin(performance.now()/150),()=>box(right?x+w-ew:x,y,ew,h,h/2,'#ffd84a'));
+  else if(ew>1)box(right?x+w-ew:x,y,ew,h,h/2,'#e0a92a');
+};
+const sidePanel=(team,x,right)=>{
+  const ms=players.filter(p=>p.team===team);
+  const one=ms.length===1,ph=one?60:12+ms.length*34;
+  box(x,10,330,ph,14,'rgba(34,18,40,.72)');
+  ms.forEach((p,i)=>{
+    const active=players[turn]===p&&(state==='aim'||state==='stunned');
+    const y=one?10:16+i*34;
+    if(active){ctx.strokeStyle='#ffd84a';ctx.lineWidth=2.5;ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y-(one?0:4),330,one?60:34,one?14:10):ctx.rect(x,y,330,34);ctx.stroke()}
+    ctx.globalAlpha=p.hp>0?1:.45;
+    ctx.font=(one?'700 16px':'700 13px')+' "Baloo 2",sans-serif';ctx.textAlign=right?'right':'left';
+    ctx.fillStyle=p.T.color;ctx.fillText(p.name+' · '+p.T.name,right?x+316:x+14,y+(one?20:11));
+    ctx.fillStyle='#fff';ctx.textAlign=right?'left':'right';ctx.fillText(p.hp>0?Math.ceil(p.hp)+'/'+p.maxHp:'Hạ gục',right?x+14:x+316,y+(one?20:11));
+    const hy=y+(one?27:15),hh=one?12:7,hw=302*p.hp/p.maxHp;
+    box(x+14,hy,302,hh,hh/2,'#1b0f22');if(hw>0)box(right?x+316-hw:x+14,hy,hw,hh,hh/2,p.hp/p.maxHp>.4?'#4fd16a':'#ff5a36');
+    ebar(x+14,hy+hh+(one?4:3),302,one?8:4,p.energy,right);
+    ctx.globalAlpha=1;
+  });
+};
+const drawHud=()=>{
+  const p=cur();
+  sidePanel(0,10,false);
+  if(vsAI()&&matchCoins>0){box(10,74,196,24,12,'rgba(34,18,40,.72)');dot(ctx,26,86,6,'#ffc21a');dot(ctx,26,86,3,'#fff3b0');ctx.font='700 14px "Baloo 2",sans-serif';ctx.fillStyle='#ffd84a';ctx.textAlign='left';ctx.fillText('+'+fmt(matchCoins)+' vàng trong trận',38,91)}
+  sidePanel(1,W-340,true);
+  // huy hiệu VS và gió
+  poly(ctx,[[W/2-34,10],[W/2+34,10],[W/2+34,40],[W/2,54],[W/2-34,40]],'#6a2bbf');
+  poly(ctx,[[W/2-34,10],[W/2+34,10],[W/2+34,18],[W/2-34,18]],'#8c4fd8');
+  ctx.fillStyle='#ffd84a';ctx.font='800 24px "Baloo 2",sans-serif';ctx.textAlign='center';ctx.fillText('VS',W/2,39);
+  box(W/2-58,60,116,26,13,'rgba(34,18,40,.72)');
+  ctx.fillStyle='#fff';ctx.font='700 15px "Baloo 2",sans-serif';ctx.textAlign='left';ctx.fillText('Gió '+Math.abs(wind),W/2-48,78);
+  if(wind){const sg=Math.sign(wind),cx=W/2+24,len=Math.abs(wind)*2.4;ctx.strokeStyle='#4fd1ff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx-len*sg,73);ctx.lineTo(cx+len*sg,73);ctx.lineTo(cx+(len-6)*sg,68);ctx.moveTo(cx+len*sg,73);ctx.lineTo(cx+(len-6)*sg,78);ctx.stroke()}
+  ctx.textAlign='center';ctx.font='700 13px "Baloo 2",sans-serif';ctx.fillStyle='rgba(255,255,255,.9)';
+  ctx.fillText((mode==='endless'?'Vô tận · Đã hạ '+kills+' · ':'')+(mode==='ai'?'Màn '+(level+1)+(waveCount()>1?' · Giai đoạn '+(wave+1)+'/'+waveCount():'')+' · ':'')+theme.name,W/2,102);
+  // thanh dưới
+  box(0,H-50,W,50,0,'rgba(34,18,40,.75)');
+  ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='700 17px "Baloo 2",sans-serif';ctx.fillText('Góc '+Math.round(p.angle)+'°',16,H-18);
+  const bx=118,bw=380;
+  box(bx,H-36,bw,22,4,'#1b0f22');
+  const pg=ctx.createLinearGradient(bx,0,bx+bw,0);pg.addColorStop(0,'#ffd84a');pg.addColorStop(1,'#ff3b2f');
+  if(power>0)box(bx,H-36,bw*power/100,22,4,pg);
+  for(let i=1;i<10;i++){ctx.fillStyle='rgba(255,255,255,.22)';ctx.fillRect(bx+bw*i/10,H-36,1,22)}
+  if(p.lastPower!=null){ctx.fillStyle='#fff';ctx.fillRect(bx+bw*p.lastPower/100-2,H-40,4,30)}
+  ctx.fillStyle='#fff';ctx.fillText('Lực '+Math.round(power),bx+bw+10,H-18);
+  let st,col;
+  if(state==='stunned'){st='Bị tê liệt';col='#ffd21f'}
+  else if(p.isAI){st='Máy đang ngắm…';col='#d9c3ae'}
+  else if(p.useSkill){st='BẬT: '+p.T.skillName;col='#ffd84a'}
+  else if(p.energy>=100){st='Kỹ năng sẵn sàng · '+(isTouch?'chạm KỸ NĂNG':'bấm E');col='#5ce05c'}
+  else{st='Năng lượng '+Math.floor(p.energy)+'%';col='#d9c3ae'}
+  ctx.font='700 15px "Baloo 2",sans-serif';ctx.fillStyle=col;ctx.fillText(st,592,H-18,190);
+  ctx.fillStyle=p.slow?TOXIC:p.boost>0?'#3fe0e0':'#fff';ctx.fillText(p.slow?'Chậm':p.boost>0?'Tốc':'Xăng',795,H-18);
+  box(842,H-32,104,14,7,'#1b0f22');if(p.fuel>0)box(842,H-32,104*p.fuel/100,14,7,'#4fd1ff');
+  if(msgT>0&&state==='aim'){ctx.globalAlpha=Math.min(1,msgT);ctx.textAlign='center';ctx.font='800 40px "Baloo 2",sans-serif';ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=5;const t='Lượt của '+p.name;ctx.strokeText(t,W/2,H/2-70);ctx.fillStyle=p.T.color;ctx.fillText(t,W/2,H/2-70);ctx.globalAlpha=1}
+};
+
+// ===== BƯỚC 17.5: MÀN HÌNH CHÍNH (2 XE ĐỐI ĐẦU) VÀ MÀN GIỚI THIỆU TRẬN =====
+// Màn hình chính dùng lại khung game: vẽ sa mạc, 2 xe to quay mặt vào nhau và bắn qua lại cho vui mắt.
+let hero=null;
+const HERO_S=2.6,HERO_X=[250,710];
+const heroMuzzle=(i)=>{const t=hero.t[i],dir=i?-1:1,a=hero.ang[i]*Math.PI/180;
+  return {x:HERO_X[i]+(PIV.x+Math.cos(a)*BARREL)*HERO_S*dir,y:groundAt(HERO_X[i])-(PIV.y+Math.sin(a)*BARREL)*HERO_S}};
+const startHero=()=>{
+  const ks=Object.keys(TANKS);let a=ks[Math.floor(Math.random()*ks.length)],b=a;
+  while(b===a)b=ks[Math.floor(Math.random()*ks.length)];
+  theme=THEMES.desert;
+  for(let x=0;x<W;x++)ground[x]=H*.74+Math.sin(x/130)*16+Math.sin(x/47)*5;
+  paintBackground();
+  decor=[60,420,540,880,930].map((x,i)=>({x,type:i%2?'rock':'cactus',s:1.3,flip:1}));
+  wind=5;airs=[];motes=[];smoke=[];blasts=[];muzzles=[];
+  hero={t:[TANKS[a],TANKS[b]],ang:[32,32],recoil:[0,0],hit:[0,0],time:0,next:1.2,side:0,shot:null};
+};
+const updateHero=dt=>{
+  const h=hero;h.time+=dt;updateAir(dt);
+  for(let i=0;i<2;i++){h.ang[i]=30+Math.sin(h.time*1.3+i*2)*6;h.recoil[i]=Math.max(0,h.recoil[i]-dt*4);h.hit[i]=Math.max(0,h.hit[i]-dt)}
+  if(!h.shot){h.next-=dt;if(h.next<=0){                                  // tới lượt 1 bên bắn
+    const i=h.side,m=heroMuzzle(i),tx=HERO_X[1-i]+rand(-30,30);
+    h.shot={i,x0:m.x,y0:m.y,x1:tx,y1:groundAt(tx)-20,t:0,x:m.x,y:m.y};h.recoil[i]=1;
+    muzzles.push({x:m.x,y:m.y,a:h.ang[i]*Math.PI/180,dir:i?-1:1,t:0});
+  }}else{
+    const s=h.shot;s.t+=dt/1.3;const k=Math.min(1,s.t);
+    s.x=s.x0+(s.x1-s.x0)*k;s.y=s.y0+(s.y1-s.y0)*k-Math.sin(Math.PI*k)*230;
+    if(k>=1){blasts.push({x:s.x,y:s.y,r:46,t:0,col:'255,170,60'});
+      for(let j=0;j<8;j++)smoke.push({x:s.x+rand(-20,20),y:s.y,vx:rand(-30,30),vy:rand(-50,-15),r:rand(10,18),life:rand(.8,1.3)});
+      h.hit[1-s.i]=.4;shake=.25;h.shot=null;h.side=1-h.side;h.next=1.1}
+  }
+  for(const o of muzzles)o.t+=dt;muzzles=muzzles.filter(o=>o.t<.14);
+  for(const o of blasts)o.t+=dt;blasts=blasts.filter(o=>o.t<.7);
+  for(const q of smoke){q.life-=dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.r+=10*dt}smoke=smoke.filter(q=>q.life>0);
+  shake=Math.max(0,shake-dt);
+};
+const bigTitle=(txt,x,y,size,fill)=>{
+  ctx.font=`800 ${size}px "Baloo 2",sans-serif`;ctx.textAlign='center';ctx.lineJoin='round';
+  ctx.lineWidth=size/6;ctx.strokeStyle='#3a1630';ctx.strokeText(txt,x,y+size*.06);ctx.strokeText(txt,x,y);
+  ctx.fillStyle=fill;ctx.fillText(txt,x,y);
+};
+const drawHeroTank=(T,x,dir,ang,recoil,hit,s)=>{
+  ctx.save();ctx.translate(x,groundAt(x));
+  ctx.fillStyle='rgba(40,10,20,.25)';ctx.beginPath();ctx.ellipse(0,2,30*s,5*s,0,0,6.29);ctx.fill();    // bóng dưới xe
+  if(hit>0){ctx.translate(rand(-3,3),0);ctx.globalAlpha=Math.floor(hit*24)%2?.5:1}
+  ctx.translate(-dir*recoil*6,0);ctx.scale(dir*s,s);drawTankArt(ctx,T,ang,recoil,0);ctx.restore();
+};
+const drawHero=()=>{
+  const h=hero;
+  ctx.save();if(shake>0)ctx.translate(rand(-6,6)*shake,rand(-6,6)*shake);
+  ctx.drawImage(bgCanvas,0,0);drawAir();drawGround();for(const d of decor)drawDecor(d);
+  for(let i=0;i<2;i++)drawHeroTank(h.t[i],HERO_X[i],i?-1:1,h.ang[i],h.recoil[i],h.hit[i],HERO_S);
+  if(h.shot){ctx.save();ctx.translate(h.shot.x,h.shot.y);dot(ctx,0,0,9,'#2e2a40');dot(ctx,-3,-3,3.5,'#8f89ad');ctx.restore()}
+  for(const o of muzzles){const k=1-o.t/.14;ctx.save();ctx.translate(o.x,o.y);ctx.scale(o.dir,1);ctx.rotate(-o.a);
+    poly(ctx,[[0,-16*k],[44*k+10,0],[0,16*k],[8,0]],'rgba(255,200,60,'+k+')');ctx.restore()}
+  for(const q of smoke){ctx.globalAlpha=Math.min(.6,q.life*.6);dot(ctx,q.x,q.y,q.r,'#8a7a70')}ctx.globalAlpha=1;
+  for(const o of blasts){const k=o.t/.7;dot(ctx,o.x,o.y,o.r*(.6+k*.8),`rgba(${o.col},${1-k})`);dot(ctx,o.x,o.y,o.r*(.3+k*.5),`rgba(255,250,220,${(1-k)*.8})`)}
+  drawMotes();
+  ctx.restore();
+  // tên game và huy hiệu VS
+  const bob=Math.sin(h.time*2)*3;
+  bigTitle('TANK WAR',W/2,120+bob,104,'#ffd84a');
+  ctx.font='700 20px "Baloo 2",sans-serif';ctx.fillStyle='#3a1630';ctx.textAlign='center';ctx.fillText('Canh góc · Canh lực · Hạ gục đối thủ',W/2,160);
+  const vs=1+Math.sin(h.time*4)*.05;ctx.save();ctx.translate(W/2,300);ctx.scale(vs,vs);
+  poly(ctx,[[-48,-40],[48,-40],[48,14],[0,40],[-48,14]],'#6a2bbf');poly(ctx,[[-48,-40],[48,-40],[48,-28],[-48,-28]],'#8c4fd8');
+  ctx.font='800 44px "Baloo 2",sans-serif';ctx.fillStyle='#ffd84a';ctx.fillText('VS',0,12);ctx.restore();
+  for(let i=0;i<2;i++){
+    const x=HERO_X[i],y=groundAt(x)+44;
+    box(x-80,y-22,160,32,16,'rgba(34,18,40,.75)');
+    ctx.font='800 19px "Baloo 2",sans-serif';ctx.fillStyle=h.t[i].color;ctx.fillText(h.t[i].name,x,y);
+  }
+};
+// Màn giới thiệu khi vào trận: 2 phe trượt vào từ 2 bên, chữ VS ở giữa
+let introT=0;
+const INTRO_TIME=2.4;
+const drawIntro=()=>{
+  const t=introT,ein=Math.min(1,t/.45),e=1-(1-ein)**3,out=t>INTRO_TIME-.35?(t-(INTRO_TIME-.35))/.35:0;
+  ctx.save();ctx.globalAlpha=1-out;
+  ctx.fillStyle='rgba(20,8,26,.55)';ctx.fillRect(0,0,W,H);
+  const cy=H/2+10;
+  const teams=[players.filter(p=>p.team===0),players.filter(p=>p.team===1)];
+  for(let side=0;side<2;side++){
+    const dir=side?-1:1,off=(1-e)*W*.6*(side?1:-1);
+    ctx.save();ctx.translate(off,0);
+    const col=teams[side][0].T.color;
+    ctx.beginPath();
+    if(!side){ctx.moveTo(0,cy-110);ctx.lineTo(W/2+30,cy-110);ctx.lineTo(W/2-30,cy+110);ctx.lineTo(0,cy+110)}
+    else{ctx.moveTo(W,cy-110);ctx.lineTo(W/2+34,cy-110);ctx.lineTo(W/2-26,cy+110);ctx.lineTo(W,cy+110)}
+    ctx.closePath();ctx.fillStyle=col;ctx.globalAlpha=(1-out)*.92;ctx.fill();
+    ctx.globalAlpha=(1-out)*.25;ctx.fillStyle='#000';ctx.fill();ctx.globalAlpha=1-out;
+    const ms=teams[side],n=ms.length,s=n===1?3.2:n===2?2.4:1.9;
+    ms.forEach((p,i)=>{
+      const x=side?W*.76+(i-(n-1)/2)*120:W*.24,y=cy+40;
+      ctx.save();ctx.translate(x,y);ctx.scale(dir*s,s);drawTankArt(ctx,p.T,28,0,0);ctx.restore();
+      ctx.font=`800 ${n===1?24:17}px "Baloo 2",sans-serif`;ctx.textAlign='center';ctx.fillStyle='#fff';
+      ctx.fillText(p.name,x,y+30);
+      ctx.font=`700 ${n===1?16:13}px "Baloo 2",sans-serif`;ctx.fillStyle='rgba(255,255,255,.85)';
+      if(n===1)ctx.fillText(p.T.name+' · '+p.maxHp+' máu',x,y+50);else{ctx.fillText(p.T.name,x,y+46);ctx.fillText(p.maxHp+' máu',x,y+62)}
+    });
+    ctx.restore();
+  }
+  const vs=Math.min(1,Math.max(0,(t-.3)/.25)),pop=1+(1-vs)*1.5;
+  ctx.save();ctx.translate(W/2,cy);ctx.scale(pop,pop);ctx.globalAlpha=vs*(1-out);bigTitle('VS',0,22,84,'#ffd84a');ctx.restore();
+  ctx.globalAlpha=1-out;
+  bigTitle((mode==='endless'?'Chế độ vô tận · ':'')+(mode==='ai'?'Màn '+(level+1)+' · ':'')+theme.name+(waveCount()>1?' · '+waveCount()+' giai đoạn':''),W/2,cy-128,30,'#ffffff');
+  ctx.font='700 15px "Baloo 2",sans-serif';ctx.fillStyle='rgba(255,255,255,.8)';ctx.textAlign='center';ctx.fillText('Bấm phím bất kỳ để bắt đầu ngay',W/2,cy+150);
+  ctx.restore();
+};
+
+// ===== BƯỚC 17.8: HIỆU ỨNG CHIẾN THẮNG =====
+// Hết trận: chờ 1 giây cho vụ nổ cuối xong, rồi tối màn hình, tia sáng xoay, xe thắng nhảy mừng, pháo hoa và giấy màu.
+let win=null;
+const WIN_TIME=5;
+const CONF_COLS=['#ffd84a','#ff4fae','#4fd1ff','#5ce05c','#ff8a1f','#b05cff','#ffffff'];
+const gameOver=()=>{
+  const alive=players.filter(p=>p.hp>0),team=alive.length?alive[0].team:-1;
+  win={t:-1,team,winners:alive,lose:vsAI()&&team!==0,played:false,conf:[],fw:[],sp:[],next:0};
+  state='victory';setEngine(false);setCharge(null);
+};
+const updateWin=dt=>{
+  const w=win;
+  if(!w.played){w.played=true;if(w.lose)sfx.defeat();else{sfx.fanfare();for(let i=0;i<140;i++)w.conf.push(newConf(true))}}
+  if(!w.lose){
+    if(w.t<WIN_TIME-1)for(let n=45*dt;n>0;n--)if(Math.random()<n)w.conf.push(newConf(false));
+    w.next-=dt;
+    if(w.next<=0&&w.t<WIN_TIME-.8){w.next=rand(.25,.55);w.fw.push({x:rand(120,W-120),y:H,vy:rand(-520,-420),ty:rand(70,220),col:CONF_COLS[Math.floor(Math.random()*6)]});sfx.whistle()}
+  }
+  for(const c of w.conf){c.y+=c.vy*dt;c.x+=Math.sin(c.ph+=dt*3)*40*dt+wind*4*dt;c.rot+=c.vr*dt}
+  w.conf=w.conf.filter(c=>c.y<H+20);
+  for(const f of w.fw){f.y+=f.vy*dt;if(f.y<=f.ty&&!f.done){f.done=true;sfx.boom(.5);
+    for(let i=0;i<46;i++){const a=i/46*6.28,s=rand(120,260);w.sp.push({x:f.x,y:f.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(.9,1.4),col:f.col})}}}
+  w.fw=w.fw.filter(f=>!f.done);
+  for(const s of w.sp){s.life-=dt;s.vy+=180*dt;s.vx*=.985;s.x+=s.vx*dt;s.y+=s.vy*dt}
+  w.sp=w.sp.filter(s=>s.life>0);
+};
+const newConf=top=>({x:rand(0,W),y:top?rand(-H,0):-10,vy:rand(70,150),ph:rand(0,6),rot:rand(0,6),vr:rand(-8,8),w:rand(5,9),h:rand(8,14),col:CONF_COLS[Math.floor(Math.random()*CONF_COLS.length)]});
+const drawWin=()=>{
+  const w=win,t=w.t,a=Math.min(1,t/.4);
+  ctx.fillStyle=`rgba(12,6,22,${(w.lose?.7:.55)*a})`;ctx.fillRect(0,0,W,H);
+  const cy=H/2+40;
+  if(!w.lose){                                                     // tia sáng xoay sau lưng xe thắng
+    ctx.save();ctx.translate(W/2,cy-30);ctx.rotate(t*.35);
+    for(let i=0;i<14;i++){ctx.rotate(Math.PI*2/14);poly(ctx,[[0,0],[-34,-460],[34,-460]],`rgba(255,216,74,${.13*a})`)}
+    ctx.restore();
+    ctx.save();ctx.globalAlpha=.6*a;ctx.drawImage(SPR.fire,W/2-170,cy-170,340,260);ctx.restore();
+  }
+  // xe của bên thắng (hoặc xe của bạn nếu thua) ở giữa màn hình
+  const show=w.lose?players.filter(p=>p.team===0):w.winners,n=show.length,s=n===1?3.6:n===2?2.8:2.2;
+  show.forEach((p,i)=>{
+    const x=W/2+(i-(n-1)/2)*(n===1?0:190),hop=w.lose?0:Math.abs(Math.sin(t*5+i))*16,pop=Math.min(1,a*1.2);
+    const T=w.lose?{skill:p.T.skill,hull:p.T.hull,pal:['#8a8494','#5c5666','#36313e']}:p.T;
+    ctx.save();ctx.translate(x,cy+20-hop);ctx.scale(pop*s*(i%2&&!w.lose?-1:1),pop*s);
+    if(!w.lose)glow(ctx,p.T.pal[0],20,()=>drawTankArt(ctx,T,w.lose?-12:30+Math.sin(t*6)*8,0,t*40));else drawTankArt(ctx,T,-12,0,0);
+    ctx.restore();
+    ctx.font='800 18px "Baloo 2",sans-serif';ctx.textAlign='center';ctx.fillStyle=w.lose?'#c9c3d6':p.T.color;ctx.fillText(p.name+' · '+p.T.name,x,cy+52);
+  });
+  // chữ lớn: nảy vào từ trên
+  const k=Math.min(1,t/.5),back=1+2.2*(k-1)**3+1.2*(k-1)**2;      // easeOutBack
+  const title=mode==='endless'?'KẾT THÚC':w.lose?'THẤT BẠI':'CHIẾN THẮNG!';
+  ctx.save();ctx.translate(W/2,120);ctx.scale(back,back);bigTitle(title,0,0,w.lose?78:86,w.lose?'#c9c3d6':'#ffd84a');ctx.restore();
+  const sub=mode==='endless'?'Bạn đã hạ '+kills+' xe địch'+(kills>bestKills?' · KỶ LỤC MỚI!':''):w.lose?'Đừng nản, thử lại nhé!':mode==='ai'&&w.team===0?'Bạn đã hạ gục toàn bộ xe địch':(w.winners[0]?.name||'')+' giành chiến thắng';
+  ctx.globalAlpha=a;ctx.font='800 22px "Baloo 2",sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(sub,W/2,168);ctx.globalAlpha=1;
+  // giấy màu, pháo hoa
+  for(const c of w.conf){ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.rot);ctx.scale(1,Math.abs(Math.cos(c.rot*1.7))+.2);ctx.fillStyle=c.col;ctx.fillRect(-c.w/2,-c.h/2,c.w,c.h);ctx.restore()}
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(const f of w.fw){dot(ctx,f.x,f.y,3,'#fff');ctx.globalAlpha=.5;dot(ctx,f.x,f.y+10,2,f.col);ctx.globalAlpha=1}
+  for(const s of w.sp){ctx.globalAlpha=Math.min(1,s.life);dot(ctx,s.x,s.y,2.4,s.col);ctx.globalAlpha=Math.min(1,s.life)*.35;dot(ctx,s.x,s.y,6,s.col)}
+  ctx.restore();ctx.globalAlpha=1;
+  if(t>1){ctx.font='700 15px "Baloo 2",sans-serif';ctx.fillStyle='rgba(255,255,255,.75)';ctx.textAlign='center';ctx.fillText('Bấm phím bất kỳ để tiếp tục',W/2,H-24)}
+};
+const skipWin=()=>{if(state==='victory'&&win.t>.8)showResult()};
+
+// ===== BƯỚC 18: MENU, CHỌN XE, CHỌN MÀN =====
+const panel=$('menu');
+const show=(html,withHero=false)=>{
+  state='menu';panel.innerHTML=html;if(typeof fsLabel==='function')fsLabel();panel.hidden=false;$('pad').hidden=true;window.scrollTo({top:0});
+  setEngine(false);setCharge(null);
+  if(withHero){players=[];startHero()}else hero=null;
+  $('screen').hidden=!withHero;
+  for(const c of panel.querySelectorAll('canvas.tkc')){const g=c.getContext('2d');g.translate(76,84);g.scale(1.8,1.8);drawTankArt(g,TANKS[c.dataset.k],28)}
+};
+const tankCards=(sel,who)=>(owned.length>1?`<button class="tk${sel==='random'?' on':''}" data-act="pick" data-who="${who}" data-k="random" type="button"><span class="rnd">?</span><b>Ngẫu nhiên</b><small>Bốc thăm 1 trong ${owned.length} xe bạn đang có</small></button>`:'')+
+  Object.entries(TANKS).map(([k,T])=>{
+    const own=owned.includes(k),pr=PRICES[k],can=coins>=pr;
+    return `<button class="tk${k===sel?' on':''}${own?'':' locked'}" data-act="${own?'pick':'buy'}" data-who="${who}" data-k="${k}" type="button"><canvas class="tkc" width="160" height="90" data-k="${k}"></canvas><b>${T.name}</b><small>${T.skillName}: ${T.desc}</small>${own?'':`<span class="price${can?' ok':''}"><span class="coin"></span>${can?'Mua · ':'Khoá · '}${fmt(pr)} vàng</span>`}</button>`;
+  }).join('');
+const upgradeHtml=()=>{
+  const full=hpLv>=HP_LEVELS,cost=hpCost(hpLv),can=!full&&coins>=cost,pct=(playerHp()-HP_BASE)/(HP_MAX-HP_BASE)*100;
+  return `<div class="upg"><div class="upg-top"><b>Máu xe của bạn: <span class="hpv">${playerHp()}</span> / ${HP_MAX}</b><small>Cấp ${hpLv}/${HP_LEVELS} · áp dụng cho mọi xe khi đánh với máy và chế độ vô tận</small></div>
+    <div class="hpbar"><i style="width:${pct}%"></i>${Array.from({length:HP_LEVELS-1},(_,i)=>`<s style="left:${(i+1)/HP_LEVELS*100}%"></s>`).join('')}</div>
+    <button class="${can?'main':'ghost'}" data-act="uphp" type="button"${full?' disabled':''}>${full?'Đã đạt tối đa 400 máu':`Nâng cấp +${HP_STEP} máu · ${fmt(cost)} vàng`}</button></div>`;
+};
+const walletHtml=()=>`<div class="wallet"><span class="coin"></span><b>${fmt(coins)}</b> vàng · Đã có ${owned.length}/${Object.keys(TANKS).length} xe</div><p class="note" id="note" aria-live="polite"></p>`;
+const note=t=>{const n=$('note');if(n)n.textContent=t};
+const showStarter=next=>show(`<h2>Chọn xe khởi đầu</h2><p>Bạn được nhận miễn phí 1 chiếc xe. Các xe còn lại bị khoá, phải mua bằng vàng kiếm được khi thắng các màn đánh với máy và nhặt hòm vàng trên bản đồ.</p>
+  <div class="grid" style="margin-top:14px">${Object.entries(TANKS).map(([k,T])=>`<button class="tk" data-act="starter" data-next="${next}" data-k="${k}" type="button"><canvas class="tkc" width="160" height="90" data-k="${k}"></canvas><b>${T.name}</b><small>${T.skillName}: ${T.desc}</small><span class="price ok">Nhận miễn phí</span></button>`).join('')}</div>
+  <div class="row"><button class="ghost" data-act="menu" type="button">← Quay lại</button></div>`);
+const mapCards=()=>[['random',null],...Object.entries(THEMES)].map(([k,T])=>
+  `<button class="tk mp${k===pvpMap?' on':''}" data-act="map" data-k="${k}" type="button"><span class="sw" style="background:${T?`linear-gradient(${T.sky[0]},${T.sky[1]} 52%,${T.layers[0]} 52%,${T.layers[0]} 60%,${T.layers[2]})`:'repeating-linear-gradient(45deg,#5a3a26 0 10px,#4a3022 10px 20px)'}">${T?'':'?'}</span><b>${T?T.name:'Ngẫu nhiên'}</b></button>`).join('');
+const levelCards=()=>LEVELS.map((L,i)=>
+  `<button class="lv" data-act="level" data-i="${i}" type="button"${i>=unlocked?' disabled':''}><b>Màn ${i+1}: ${THEMES[L.theme].name}</b>${L.waves.map((w,wi)=>`<small>${L.waves.length>1?'Giai đoạn '+(wi+1)+': ':L.boss?'Trùm: ':w.length>1?w.length+' xe địch: ':'Đối thủ: '}${w.map(([t],j)=>TANKS[t].name+' ('+enemyHp(w)[j]+')').join(', ')}</small>`).join('')}<small>${L.diff} · Gió tối đa ${L.wind}${i>=unlocked?' · 🔒 Chưa mở':''}</small><span class="price ok"><span class="coin"></span>Thưởng ${fmt(levelReward(i)*(cleared.includes(i)?.5:1))} vàng${cleared.includes(i)?' (đã thắng)':''}</span></button>`).join('');
+// ===== BƯỚC 18.5: HỒ SƠ NGƯỜI CHƠI (chơi mới / chơi tiếp / đổi người chơi) =====
+// Mỗi người chơi có 1 hồ sơ riêng: tên, vàng, xe đã mua, cấp máu, màn đã qua, kỷ lục vô tận.
+// Tất cả hồ sơ lưu chung trong localStorage của trình duyệt, dưới 1 khoá duy nhất.
+const PROFILE_KEY='tankwar-profiles',MAX_PROFILES=10,NAME_MAX=16;
+let profiles={list:[],current:null},delArm=null;
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));   // tên do người chơi gõ: luôn escape trước khi chèn vào HTML
+const freshData=()=>({coins:0,owned:[],cleared:[],hpLv:0,unlocked:1,bestKills:0});
+const saveProfiles=()=>{try{localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles))}catch(e){}};
+const curProfile=()=>profiles.list.find(p=>p.id===profiles.current)||null;
+const lastProfile=()=>profiles.list.slice().sort((a,b)=>b.last-a.last)[0]||null;
+const applyProfile=pr=>{
+  const d={...freshData(),...pr.data};
+  coins=d.coins;owned=d.owned.filter(k=>TANKS[k]);cleared=d.cleared;hpLv=clamp(d.hpLv,0,HP_LEVELS);
+  unlocked=clamp(d.unlocked,1,LEVELS.length);bestKills=d.bestKills;
+  pickP1=owned[0]||'rapid';pickP2=owned[1]||owned[0]||'rapid';
+  profiles.current=pr.id;pr.last=Date.now();saveProfiles();
+};
+const makeProfile=(name,data=freshData())=>{
+  const pr={id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),name,created:Date.now(),last:Date.now(),data};
+  profiles.list.push(pr);applyProfile(pr);return pr;
+};
+const loadProfiles=()=>{
+  try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');if(p&&Array.isArray(p.list))profiles=p}catch(e){}
+  if(!profiles.list.length){                                         // có dữ liệu của bản cũ (trước khi có hồ sơ): chuyển vào 1 hồ sơ để không mất
+    try{
+      const g=k=>localStorage.getItem(k);
+      if(g('tankwar-coins')!==null||g('tankwar-owned')!==null){
+        makeProfile('Người chơi 1',{coins:+g('tankwar-coins')||0,owned:JSON.parse(g('tankwar-owned')||'[]'),cleared:JSON.parse(g('tankwar-cleared')||'[]'),
+          hpLv:+g('tankwar-hplv')||0,unlocked:+g('phaodai-unlocked')||1,bestKills:+g('tankwar-best-endless')||0});
+      }
+    }catch(e){}
+  }
+  const pr=curProfile()||lastProfile();if(pr)applyProfile(pr);
+};
+const profileStats=pr=>{const d={...freshData(),...pr.data};return `${fmt(d.coins)} vàng · ${d.owned.length}/${Object.keys(TANKS).length} xe · ${d.cleared.length}/${LEVELS.length} màn · kỷ lục vô tận ${d.bestKills} · máu ${HP_BASE+HP_STEP*d.hpLv}`};
+const playerName=()=>curProfile()?.name||'Bạn';
+// Màn hình chính: Chơi tiếp / Chơi mới / Chọn người chơi
+const showTitle=()=>{
+  const pr=lastProfile();
+  show(`<div class="home"><div><h2>Chào mừng đến Tank War</h2><p>${pr?`Lần chơi gần nhất: <b>${esc(pr.name)}</b> · ${profileStats(pr)}`:'Tạo người chơi mới để bắt đầu. Tiến trình của mỗi người chơi được lưu riêng trên trình duyệt này.'}</p></div>
+    <div class="row">${pr?`<button class="main" data-act="continue" type="button">Chơi tiếp</button>`:''}<button class="main ${pr?'alt':''}" data-act="newgame" type="button">Chơi mới</button>${profiles.list.length?`<button class="ghost" data-act="profiles" type="button">Chọn người chơi</button>`:''}<button class="ghost fsBtn" type="button">Toàn màn hình</button></div></div>`,true);
+};
+const showNameForm=(renameId)=>{
+  const pr=renameId&&profiles.list.find(p=>p.id===renameId);
+  const full=!pr&&profiles.list.length>=MAX_PROFILES;
+  show(`<h2>${pr?'Đổi tên người chơi':'Chơi mới'}</h2>
+    ${full?`<p>Đã có tối đa ${MAX_PROFILES} người chơi. Hãy xoá bớt một người chơi trong mục "Chọn người chơi".</p><div class="row"><button class="main" data-act="profiles" type="button">Chọn người chơi</button><button class="ghost" data-act="title" type="button">← Quay lại</button></div>`:`
+    <p>${pr?'Nhập tên mới.':'Đặt tên cho người chơi. Người chơi mới bắt đầu với 0 vàng, 100 máu và được chọn 1 xe miễn phí.'}</p>
+    <form class="nameform" id="nameForm" data-rename="${pr?esc(pr.id):''}">
+      <label for="pname">Tên người chơi (tối đa ${NAME_MAX} ký tự)</label>
+      <input id="pname" name="pname" maxlength="${NAME_MAX}" autocomplete="off" spellcheck="false" value="${pr?esc(pr.name):''}" placeholder="Ví dụ: Công Pháo Thủ">
+      <p class="note" id="note" aria-live="polite"></p>
+      <div class="row"><button class="main" type="submit">${pr?'Lưu tên':'Tạo người chơi'}</button><button class="ghost" data-act="${pr?'modes':'title'}" type="button">← Quay lại</button></div>
+    </form>`}`);
+  const inp=$('pname');if(inp){inp.focus();inp.select()}
+};
+const showProfiles=()=>{
+  delArm=null;
+  const list=profiles.list.slice().sort((a,b)=>b.last-a.last);
+  show(`<h2>Chọn người chơi</h2><p>Mỗi người chơi có vàng, xe và tiến trình riêng.</p><p class="note" id="note" aria-live="polite"></p>
+    <div class="plist">${list.map(pr=>`<div class="pcard${pr.id===profiles.current?' on':''}"><div><b>${esc(pr.name)}</b><small>${profileStats(pr)}</small></div>
+      <div class="row"><button class="main" data-act="useprof" data-id="${esc(pr.id)}" type="button">Chơi</button><button class="ghost" data-act="renameprof" data-id="${esc(pr.id)}" type="button">Đổi tên</button><button class="ghost danger" data-act="delprof" data-id="${esc(pr.id)}" type="button">Xoá</button></div></div>`).join('')}</div>
+    <div class="row"><button class="main alt" data-act="newgame" type="button">Chơi mới</button><button class="ghost" data-act="title" type="button">← Màn hình chính</button></div>`);
+};
+const submitName=form=>{
+  const name=$('pname').value.replace(/\s+/g,' ').trim(),rid=form.dataset.rename;
+  if(!name)return note('Hãy nhập tên người chơi.');
+  if([...name].length>NAME_MAX)return note('Tên dài tối đa '+NAME_MAX+' ký tự.');
+  if(profiles.list.some(p=>p.id!==rid&&p.name.toLowerCase()===name.toLowerCase()))return note('Tên này đã có người dùng. Hãy chọn tên khác.');
+  if(rid){const pr=profiles.list.find(p=>p.id===rid);if(pr){pr.name=name;saveProfiles()}return showModes()}
+  makeProfile(name);sfx.ready();showStarter('modes');
+};
+
+const showModes=()=>{if(!curProfile())return showTitle();show(`<div class="home"><div><h2>Chọn chế độ chơi</h2><p class="who">Người chơi: <b>${esc(playerName())}</b> · ${profileStats(curProfile())} · <button class="link" data-act="renameme" type="button">Đổi tên</button> · <button class="link" data-act="title" type="button">Đổi người chơi</button></p><p>Đánh với máy qua 15 màn khó dần: có màn đấu cùng lúc 2–3 xe địch, màn 2 giai đoạn và màn đấu trùm. Chế độ vô tận: hạ địch liên tục để kiếm vàng. Hoặc rủ bạn bè đấu 2 người trên cùng một máy.</p></div>
+  <div class="row"><button class="main" data-act="campaign" type="button">Đánh với máy</button><button class="main end" data-act="endless" type="button">Vô tận</button><button class="main alt" data-act="pvp" type="button">2 người chơi</button><button class="ghost fsBtn" type="button">Toàn màn hình</button></div></div>`,true)};
+const showMenu=()=>curProfile()?showModes():showTitle();
+const showEndless=()=>show(`<h2>Chế độ vô tận</h2>${walletHtml()}
+  <p>Hạ xe địch liên tục để kiếm vàng: mỗi xe hạ được +30 vàng trở lên (tăng dần, tối đa 100) và hồi ${END_HEAL} máu, rồi viện binh mới nhảy dù xuống. Địch mạnh dần, hạ 6 xe thì gặp 2 địch cùng lúc, hạ 12 xe thì gặp 3. Có thêm hòm vàng trên bản đồ. Kỷ lục của bạn: <b>${bestKills}</b> xe.</p>
+  ${upgradeHtml()}<h3>Chọn xe</h3><div class="grid">${tankCards(pickP1,1)}</div>
+  <div class="row"><button class="main" data-act="endstart" type="button">Bắt đầu</button><button class="ghost" data-act="menu" type="button">← Quay lại</button></div>`);
+const showCampaign=()=>show(`<h2>Đánh với máy</h2>${walletHtml()}${upgradeHtml()}<h3>1. Chọn xe của bạn</h3><div class="grid">${tankCards(pickP1,1)}</div>
+  <h3>2. Chọn màn để bắt đầu</h3><div class="grid">${levelCards()}</div><div class="row"><button class="ghost" data-act="menu" type="button">← Quay lại</button></div>`);
+const showPvp=()=>show(`<h2>2 người chơi</h2>${walletHtml()}<p>Chọn xe (trong số xe đã mở khoá) và bản đồ, hoặc để máy bốc thăm ngẫu nhiên.</p>
+  <div class="row"><button class="main alt" data-act="allrandom" type="button">Ngẫu nhiên tất cả và vào trận</button></div>
+  <h3>Người 1 chọn xe</h3><div class="grid">${tankCards(pickP1,1)}</div>
+  <h3>Người 2 chọn xe</h3><div class="grid">${tankCards(pickP2,2)}</div>
+  <h3>Chọn bản đồ</h3><div class="grid maps">${mapCards()}</div>
+  <div class="row"><button class="main" data-act="start" type="button">Vào trận</button><button class="ghost" data-act="menu" type="button">← Quay lại</button></div>`);
+const showResult=()=>{
+  const alive=players.filter(p=>p.hp>0);
+  if(mode==='endless'){
+    const rec=kills>bestKills;
+    if(!paid){paid=true;coins+=matchCoins;if(rec)bestKills=kills;saveProgress()}
+    show(`<h2>Kết thúc chế độ vô tận</h2><p>Bạn đã hạ <b>${kills}</b> xe địch${rec?' · kỷ lục mới!':' · kỷ lục: '+bestKills+' xe'}.</p>
+      <p class="reward"><span class="coin"></span>+${fmt(matchCoins)} vàng (hạ địch và hòm vàng) · Bạn có <b>${fmt(coins)}</b> vàng</p>
+      <div class="row"><button class="main" data-act="endstart" type="button">Chơi tiếp vô tận</button><button class="ghost" data-act="endless" type="button">Đổi xe / nâng cấp</button><button class="ghost" data-act="menu" type="button">Menu</button></div>`);
+    return;
+  }
+  if(mode==='ai'){
+    const win=alive.some(p=>p.team===0),last=level===LEVELS.length-1;
+    if(win&&level+2>unlocked)unlocked=Math.min(LEVELS.length,level+2);
+    const first=!cleared.includes(level),lvR=win?Math.round(levelReward(level)*(first?1:.5)):0;
+    if(!paid){paid=true;coins+=lvR+matchCoins;if(win&&first)cleared.push(level);saveProgress()}      // cộng vàng đúng 1 lần mỗi trận
+    const nextBuy=Object.keys(TANKS).filter(k=>!owned.includes(k)&&PRICES[k]<=coins).map(k=>TANKS[k].name);
+    if(hpLv<HP_LEVELS&&coins>=hpCost(hpLv))nextBuy.unshift('nâng cấp máu lên '+(playerHp()+HP_STEP));
+    const rewardHtml=`<p class="reward"><span class="coin"></span>${win?`+${fmt(lvR)} vàng thắng màn${first?' (lần đầu)':' (chơi lại: 50%)'}`:'Thua: không có thưởng màn'} · +${fmt(matchCoins)} vàng từ hòm · Bạn có <b>${fmt(coins)}</b> vàng</p>${nextBuy.length?`<p class="note">Đủ vàng cho: ${nextBuy.join(', ')}. Vào "Chọn màn / đổi xe" để mua hoặc nâng cấp.</p>`:''}`;
+    show(`<h2>${win?(last?'Phá đảo! Bạn đã thắng cả '+LEVELS.length+' màn':'Thắng màn '+(level+1)+'!'):'Thua rồi!'}</h2>
+      <p>${win?(last?'Không còn đối thủ nào. Thử lại với một chiếc xe khác nhé!':'Màn tiếp theo: '+THEMES[LEVELS[level+1].theme].name+', '+(LEVELS[level+1].waves.length>1?LEVELS[level+1].waves.length+' giai đoạn':LEVELS[level+1].enemies.length>1?LEVELS[level+1].enemies.length+' xe địch':'đối thủ '+TANKS[LEVELS[level+1].enemies[0][0]].name)+'.'):'Để ý hướng gió và vạch lực lượt trước để chỉnh dần cho chuẩn. Vàng nhặt từ hòm vẫn được giữ lại.'}</p>${rewardHtml}
+      <div class="row">${win&&!last?'<button class="main" data-act="next" type="button">Màn tiếp theo</button>':''}
+      <button class="${win&&!last?'ghost':'main'}" data-act="retry" type="button">Chơi lại màn này</button>
+      <button class="ghost" data-act="campaign" type="button">Chọn màn / đổi xe</button></div>`);
+  }else{
+    show(`<h2>${alive.length?alive[0].name+' thắng!':'Hoà!'}</h2><p>Đấu lại trên một địa hình ngẫu nhiên khác?</p>
+      <div class="row"><button class="main" data-act="start" type="button">Đấu lại</button><button class="ghost" data-act="pvp" type="button">Đổi xe</button><button class="ghost" data-act="menu" type="button">Menu</button></div>`);
+  }
+};
+const startMatch=()=>{
+  const pickOne=o=>{const k=Object.keys(o);return k[Math.floor(Math.random()*k.length)]};
+  makeTerrain(mode==='ai'?LEVELS[level].theme:mode==='endless'||pvpMap==='random'?pickOne(THEMES):pvpMap);
+  const pickOwned=()=>owned.length?owned[Math.floor(Math.random()*owned.length)]:pickOne(TANKS);
+  const t1=pickP1==='random'?pickOwned():pickP1,t2=pickP2==='random'?pickOwned():pickP2;
+  matchCoins=0;paid=false;
+  if(mode==='ai'){
+    wave=0;
+    players=[newPlayer(playerName(),t1,140,1,false,playerHp(),0),...spawnWave(0,false)];
+    if(LEVELS[level].boss)players[1].name='Trùm';
+    turn=0;
+  }else if(mode==='endless'){
+    wave=0;kills=0;players=[newPlayer(playerName(),t1,140,1,false,playerHp(),0)];
+    players=players.concat(spawnEndless(false));turn=0;
+  }else{
+    wave=0;
+    players=[newPlayer(playerName(),t1,140,1,false,PLAYER_HP,0),newPlayer('Người 2',t2,W-140,-1,false,PLAYER_HP,1)];
+    turn=Math.random()<.5?0:1;
+  }
+  for(let t=0;t<2;t++){const m=players.map((p,i)=>i).filter(i=>players[i].team===t);lastIdx[t]=m[m.length-1]}
+  lastIdx[players[turn].team]=turn;
+  for(const p of players)p.y=groundAt(p.x);
+  const rolled=[[pickP1,players[0]],[mode==='pvp'?pickP2:'',players[1]]].filter(([k])=>k==='random');
+  shells=[];queue=[];blasts=[];lasers=[];texts=[];zones=[];drones=[];smoke=[];muzzles=[];airs=[];motes=[];crates=[];round=1;cutin=null;zp=[];rods=[];bolts=[];whiteFlash=0;
+  for(const [,p] of rolled)texts.push({x:p.x,y:p.y-100,txt:'Bốc được: '+p.T.name,life:3,col:p.T.color});
+  hero=null;panel.hidden=true;$('screen').hidden=false;$('pad').hidden=false;
+  if(isTouch&&!isFs())toggleFs();                                    // điện thoại: tự phóng to khung game
+  clearKeys();wind=0;state='intro';introT=0;msgT=0;          // màn giới thiệu VS trước khi vào lượt đầu
+};
+panel.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='nameForm')submitName(e.target)});
+panel.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  const a=b.dataset.act;
+  if(a==='menu')showMenu();
+  else if(a==='title')showTitle();
+  else if(a==='modes')showModes();
+  else if(a==='continue'){const pr=lastProfile();if(pr){applyProfile(pr);showModes()}}
+  else if(a==='newgame')showNameForm();
+  else if(a==='profiles')showProfiles();
+  else if(a==='renameme')showNameForm(profiles.current);
+  else if(a==='useprof'){const pr=profiles.list.find(p=>p.id===b.dataset.id);if(pr){applyProfile(pr);sfx.click();showModes()}}
+  else if(a==='renameprof'){showNameForm(b.dataset.id)}
+  else if(a==='delprof'){                                            // xoá cần bấm 2 lần cho chắc
+    const id=b.dataset.id,pr=profiles.list.find(p=>p.id===id);if(!pr)return;
+    if(delArm!==id){delArm=id;b.textContent='Bấm lần nữa để xoá';note('Xoá "'+pr.name+'" sẽ mất toàn bộ vàng, xe và tiến trình của người chơi này.');return}
+    profiles.list=profiles.list.filter(p=>p.id!==id);if(profiles.current===id)profiles.current=null;saveProfiles();
+    const nx=lastProfile();if(nx&&!profiles.current)applyProfile(nx);
+    profiles.list.length?showProfiles():showTitle();
+  }
+  else if(a==='campaign'){mode='ai';if(!owned.length)showStarter('campaign');else{fixPicks();showCampaign()}}
+  else if(a==='endless'){mode='endless';if(!owned.length)showStarter('endless');else{fixPicks();showEndless()}}
+  else if(a==='endstart'){mode='endless';startMatch()}
+  else if(a==='pvp'){mode='pvp';if(!owned.length)showStarter('pvp');else{fixPicks();showPvp()}}
+  else if(a==='starter'){owned=[b.dataset.k];pickP1=pickP2=b.dataset.k;saveProgress();sfx.pickup();({pvp:showPvp,endless:showEndless,modes:showModes}[b.dataset.next]||showCampaign)();note('Đã nhận '+TANKS[b.dataset.k].name+'! Thắng các màn để kiếm vàng mua thêm xe.')}
+  else if(a==='uphp'){
+    const cost=hpCost(hpLv);
+    if(hpLv>=HP_LEVELS)note('Máu đã đạt tối đa 400.');
+    else if(coins>=cost){coins-=cost;hpLv++;saveProgress();sfx.ready();const y=window.scrollY;(mode==='endless'?showEndless:showCampaign)();window.scrollTo(0,y);note('Đã nâng máu lên '+playerHp()+'!')}
+    else note('Chưa đủ vàng: cần thêm '+fmt(cost-coins)+' vàng để nâng cấp máu.');
+  }
+  else if(a==='buy'){
+    const k=b.dataset.k,pr=PRICES[k];
+    if(coins>=pr){
+      coins-=pr;owned.push(k);saveProgress();sfx.coin();
+      if(b.dataset.who==='1')pickP1=k;else pickP2=k;
+      const y=window.scrollY;({pvp:showPvp,endless:showEndless}[mode]||showCampaign)();window.scrollTo(0,y);note('Đã mua '+TANKS[k].name+' với giá '+fmt(pr)+' vàng!');
+    }else note('Chưa đủ vàng: cần thêm '+fmt(pr-coins)+' vàng để mua '+TANKS[k].name+'.');
+  }
+  else if(a==='pick'){
+    if(b.dataset.who==='1')pickP1=b.dataset.k;else pickP2=b.dataset.k;
+    panel.querySelectorAll(`button[data-who="${b.dataset.who}"]`).forEach(x=>x.classList.toggle('on',x===b));
+  }
+  else if(a==='map'){pvpMap=b.dataset.k;panel.querySelectorAll('button[data-act="map"]').forEach(x=>x.classList.toggle('on',x===b))}
+  else if(a==='allrandom'){pickP1=pickP2=owned.length>1?'random':owned[0];pvpMap='random';startMatch()}
+  else if(a==='level'){level=+b.dataset.i;startMatch()}
+  else if(a==='start'||a==='retry')startMatch();
+  else if(a==='next'){level++;startMatch()}
+});
+$('quitBtn').onclick=()=>showMenu();
+$('screen').addEventListener('pointerdown',()=>{if(state==='intro')startTurn();else skipWin()});
+// Toàn màn hình: thử API fullscreen thật của trình duyệt; nếu khung trang không cho phép thì phóng khung game phủ kín cửa sổ.
+const caseEl=document.querySelector('.case');
+let fakeFs=false;
+const isFs=()=>!!document.fullscreenElement||fakeFs;
+const fsLabel=()=>{for(const b of document.querySelectorAll('.fsBtn'))b.textContent=isFs()?'Thoát toàn màn hình':'Toàn màn hình';caseEl.classList.toggle('fs',isFs())};
+const toggleFs=async()=>{
+  if(isFs()){
+    if(document.fullscreenElement){try{await document.exitFullscreen()}catch(e){}}
+    fakeFs=false;fsLabel();return;
+  }
+  try{if(!caseEl.requestFullscreen)throw 0;await caseEl.requestFullscreen();try{screen.orientation.lock('landscape').catch(()=>{})}catch(_){}}
+  catch(e){fakeFs=true}                                               // bị chặn: dùng chế độ phủ kín cửa sổ
+  fsLabel();
+};
+document.addEventListener('fullscreenchange',fsLabel);
+document.addEventListener('click',e=>{if(e.target.closest('.fsBtn'))toggleFs()});
+addEventListener('keydown',e=>{
+  if(e.target.closest&&e.target.closest('input,textarea'))return;
+  if(e.code==='KeyF'&&state!=='menu'||e.code==='KeyF'&&hero){e.preventDefault();toggleFs()}
+  else if(e.code==='Escape'&&fakeFs){fakeFs=false;fsLabel()}
+});
+const soundLabel=()=>{$('soundBtn').textContent='Âm thanh: '+(muted?'Tắt':'Bật')};soundLabel();
+$('soundBtn').onclick=()=>{muted=!muted;if(master)master.gain.value=muted?0:.6;soundLabel();try{localStorage.setItem('phaodai-mute',muted?'1':'0')}catch(e){}};
+
+// ===== BƯỚC 18.9: ĐIỀU KHIỂN CẢM ỨNG =====
+// Thiết bị có màn hình cảm ứng là chính (điện thoại, máy tính bảng): hiện nút đè lên màn hình game, và tự vào toàn màn hình khi bắt đầu trận.
+let isTouch=!!(window.matchMedia&&matchMedia('(pointer: coarse)').matches)||('ontouchstart' in window&&navigator.maxTouchPoints>0);
+const touchEl=$('touch'),tSkill=$('tSkill');
+if(isTouch)document.body.classList.add('touchdev');
+for(const el of [$('screen'),$('pad')])el.addEventListener('contextmenu',e=>e.preventDefault());   // chặn menu khi nhấn giữ
+for(const b of document.querySelectorAll('.tb')){                   // nút sáng lên khi đang được giữ
+  b.addEventListener('pointerdown',()=>b.classList.add('down'));
+  for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>b.classList.remove('down'));
+}
+const updateTouchUi=()=>{
+  const show=isTouch&&!hero&&state!=='menu'&&state!=='victory'&&state!=='intro';
+  if(touchEl.hidden===show)touchEl.hidden=!show;
+  if(show){const p=cur(),mine=p&&!p.isAI&&state==='aim';tSkill.classList.toggle('ready',!!(mine&&p.energy>=100&&!p.useSkill));tSkill.classList.toggle('on',!!(mine&&p.useSkill))}
+};
+
+// ===== BƯỚC 19: VÒNG LẶP GAME =====
+let last=performance.now();
+const loop=t=>{const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);updateTouchUi();if(!$('screen').hidden){if(state==='menu'&&hero)drawHero();else draw()}requestAnimationFrame(loop)};
+loadProfiles();showTitle();requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
