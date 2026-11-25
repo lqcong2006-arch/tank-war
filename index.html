@@ -89,9 +89,13 @@ button{touch-action:manipulation}
 .touch{position:absolute;inset:0;pointer-events:none}
 .tpad,.tact{position:absolute;bottom:calc(9.3% + 10px);pointer-events:auto}
 /* Cỡ nút tính theo màn hình (vw/vh), không theo khung chứa, nên luôn đủ to để bấm bằng ngón cái */
-.touch{--tb:clamp(50px,min(7vw,13vh),72px);--gap:clamp(12px,2vw,20px)}
-.tpad{left:2.5%;display:flex;gap:var(--gap)}
-.tang{display:grid;gap:calc(var(--gap)*.7)}
+.touch{--tb:clamp(50px,min(7vw,13vh),70px);--gap:clamp(10px,1.8vw,18px)}
+.tpad{left:2%;--db:calc(var(--tb)*.9);display:grid;grid-template-columns:repeat(3,var(--db));grid-template-rows:repeat(3,var(--db));gap:3px}
+.tpad .tb{width:var(--db);height:var(--db)}
+.tpad .up{grid-area:1/2}.tpad .lf{grid-area:2/1}.tpad .dval{grid-area:2/2}.tpad .rt{grid-area:2/3}.tpad .dn{grid-area:3/2}
+.dval{display:grid;place-items:center;border-radius:50%;color:#fff;font-weight:800;font-size:calc(var(--db)*.3);background:rgba(20,10,30,.25);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.tb.ang{display:grid;place-content:center;line-height:1;background:rgba(40,60,110,.38);border-color:rgba(160,200,255,.55)}
+.tb.ang small{font-size:.42em;font-weight:700;opacity:.85;margin-top:1px}
 .tb{flex:none;width:var(--tb);height:var(--tb);min-width:0;min-height:0;padding:0;border-radius:50%;background:rgba(20,10,30,.32);color:#fff;font-size:calc(var(--tb)*.38);border:2px solid rgba(255,255,255,.45);backdrop-filter:blur(2px)}
 .tb:active,.tb.down{background:rgba(255,216,74,.55);color:#2a1030}
 .tact{right:2.5%;display:flex;align-items:flex-end;gap:var(--gap)}
@@ -145,12 +149,16 @@ button:focus-visible{outline:3px solid #ffd84a;outline-offset:2px}
       </div></div>
       <!-- Nút cảm ứng (chỉ hiện trên điện thoại / máy tính bảng) -->
       <div class="touch" id="touch" hidden>
+        <!-- Bên trái: bàn phím 4 hướng. ◀ ▶ di chuyển, ▲ ▼ chỉnh góc, giữa hiện góc hiện tại -->
         <div class="tpad">
+          <button class="tb ang up" data-k="up" type="button" aria-label="Tăng góc">▲<small>góc</small></button>
           <button class="tb lf" data-k="left" type="button" aria-label="Đi trái">◀</button>
+          <div class="dval" id="dval">45°</div>
           <button class="tb rt" data-k="right" type="button" aria-label="Đi phải">▶</button>
+          <button class="tb ang dn" data-k="down" type="button" aria-label="Giảm góc">▼<small>góc</small></button>
         </div>
+        <!-- Bên phải: kỹ năng + bắn -->
         <div class="tact">
-          <div class="tang"><button class="tb up" data-k="up" type="button" aria-label="Tăng góc">▲</button><button class="tb dn" data-k="down" type="button" aria-label="Giảm góc">▼</button></div>
           <button class="tb sk" id="tSkill" data-k="skill" type="button">KỸ<br>NĂNG</button>
           <button class="tb fireb" data-k="fire" type="button">BẮN<small>giữ để nạp</small></button>
         </div>
@@ -166,7 +174,7 @@ button:focus-visible{outline:3px solid #ffd84a;outline-offset:2px}
       <button class="fire" data-k="fire" type="button">Giữ để bắn</button>
     </div>
   </div>
-  <p class="help"><b>Điện thoại:</b> dùng nút ◀ ▶ để đi, ▲ ▼ chỉnh góc, giữ nút BẮN để nạp lực rồi thả ra, nút KỸ NĂNG sáng lên khi đầy năng lượng. <b>Máy tính:</b> <b>A / D</b> di chuyển (tốn xăng) · <b>W / S</b> chỉnh góc · <b>giữ Space</b> nạp lực, <b>thả ra</b> để bắn · Luồng khí trắng trên bản đồ cho biết hướng và độ mạnh của gió · <b>F</b> bật/tắt toàn màn hình · <b>Esc</b> hoặc nút ⚙ để tạm dừng · <b>E</b> bật kỹ năng khi thanh năng lượng (màu vàng) đầy 100%. Mỗi phát bắn +10% năng lượng; bắn trúng đối thủ hoặc bị trúng đạn được cộng thêm theo sát thương. Hòm tiếp tế thả dù ngẫu nhiên: lái xe chạm vào hoặc bắn nổ gần hòm để nhận <b style="color:#2f9e4a">hồi máu</b>, <b style="color:#2f7fd6">khiên</b>, <b style="color:#b88a00">năng lượng đầy</b> hoặc <b style="color:#1aa7a7">tăng tốc</b>; khi đánh với máy còn có <b style="color:#b88a00">hòm vàng</b> để kiếm tiền mua xe mới.</p>
+  <p class="help"><b>Điện thoại:</b> bàn phím 4 hướng bên trái: ◀ ▶ để đi, ▲ ▼ chỉnh góc; bên phải: giữ nút BẮN để nạp lực rồi thả ra, nút KỸ NĂNG sáng lên khi đầy năng lượng. <b>Máy tính:</b> <b>A / D</b> di chuyển (tốn xăng) · <b>W / S</b> chỉnh góc · <b>giữ Space</b> nạp lực, <b>thả ra</b> để bắn · Luồng khí trắng trên bản đồ cho biết hướng và độ mạnh của gió · <b>F</b> bật/tắt toàn màn hình · <b>Esc</b> hoặc nút ⚙ để tạm dừng · <b>E</b> bật kỹ năng khi thanh năng lượng (màu vàng) đầy 100%. Mỗi phát bắn +10% năng lượng; bắn trúng đối thủ hoặc bị trúng đạn được cộng thêm theo sát thương. Hòm tiếp tế thả dù ngẫu nhiên: lái xe chạm vào hoặc bắn nổ gần hòm để nhận <b style="color:#2f9e4a">hồi máu</b>, <b style="color:#2f7fd6">khiên</b>, <b style="color:#b88a00">năng lượng đầy</b> hoặc <b style="color:#1aa7a7">tăng tốc</b>; khi đánh với máy còn có <b style="color:#b88a00">hòm vàng</b> để kiếm tiền mua xe mới.</p>
 </div>
 <script>
 {
@@ -263,7 +271,8 @@ const THEMES={
 // ===== BƯỚC 5: CÁC MÀN CHƠI VỚI MÁY =====
 // err = [sai số góc, sai số lực]; skillRate = xác suất máy dùng kỹ năng khi năng lượng đầy
 // enemies = danh sách xe địch [loại xe, máu]. Màn nhiều giai đoạn dùng waves = [đợt 1, đợt 2]. Xe người chơi luôn có PLAYER_HP = 200.
-const ENEMY_X=[W-140,W-270,W-400];           // vị trí đứng của xe địch
+const ENEMY_X=[W-140,W-270,W-400];
+const P1X=()=>typeof isTouch!=='undefined'&&isTouch?185:140;   // điện thoại: xe người chơi đứng lùi vào trong, không bị bàn phím 4 hướng che           // vị trí đứng của xe địch
 const MAX_ENEMY_HP=350;                      // tổng máu xe địch trong 1 đợt không vượt quá 350
 // Nếu ai đó sửa bảng LEVELS mà tổng máu vượt 350, máu từng xe sẽ tự thu nhỏ theo tỉ lệ cho vừa
 const enemyHp=list=>{const sum=list.reduce((a,[,hp])=>a+hp,0),k=Math.min(1,MAX_ENEMY_HP/sum);return list.map(([,hp])=>Math.floor(hp*k))};   // giới hạn 350 tính cho từng đợt
@@ -396,7 +405,7 @@ const makeTerrain=key=>{
   decor=[];
   for(let i=0;i<16;i++){
     const x=rand(20,W-20);
-    if([140,...ENEMY_X].some(sx=>Math.abs(x-sx)<45)||ground[Math.round(x)]>H)continue;
+    if([140,185,...ENEMY_X].some(sx=>Math.abs(x-sx)<45)||ground[Math.round(x)]>H)continue;
     decor.push({x,type:theme.decor[i%theme.decor.length],s:rand(.7,1.25),flip:Math.random()<.5?-1:1});
   }
 };
@@ -1860,15 +1869,15 @@ const startMatch=()=>{
   matchCoins=0;paid=false;
   if(mode==='ai'){
     wave=0;
-    players=[newPlayer(playerName(),t1,140,1,false,playerHp(),0),...spawnWave(0,false)];
+    players=[newPlayer(playerName(),t1,P1X(),1,false,playerHp(),0),...spawnWave(0,false)];
     if(LEVELS[level].boss)players[1].name='Trùm';
     turn=0;
   }else if(mode==='endless'){
-    wave=0;kills=0;players=[newPlayer(playerName(),t1,140,1,false,playerHp(),0)];
+    wave=0;kills=0;players=[newPlayer(playerName(),t1,P1X(),1,false,playerHp(),0)];
     players=players.concat(spawnEndless(false));turn=0;
   }else{
     wave=0;
-    players=[newPlayer(playerName(),t1,140,1,false,PLAYER_HP,0),newPlayer('Người 2',t2,W-140,-1,false,PLAYER_HP,1)];
+    players=[newPlayer(playerName(),t1,P1X(),1,false,PLAYER_HP,0),newPlayer('Người 2',t2,W-140,-1,false,PLAYER_HP,1)];
     turn=Math.random()<.5?0:1;
   }
   for(let t=0;t<2;t++){const m=players.map((p,i)=>i).filter(i=>players[i].team===t);lastIdx[t]=m[m.length-1]}
@@ -1979,7 +1988,7 @@ const updateTouchUi=()=>{
   if(!playing&&!sheet.hidden)closeSheet();
   const show=isTouch&&!hero&&state!=='menu'&&state!=='victory'&&state!=='intro';
   if(touchEl.hidden===show)touchEl.hidden=!show;
-  if(show){const p=cur(),mine=p&&!p.isAI&&state==='aim';tSkill.classList.toggle('ready',!!(mine&&p.energy>=100&&!p.useSkill));tSkill.classList.toggle('on',!!(mine&&p.useSkill))}
+  if(show){const p=cur(),mine=p&&!p.isAI&&state==='aim';const dv=$('dval'),at=p?Math.round(p.angle)+'°':'';if(dv.textContent!==at)dv.textContent=at;tSkill.classList.toggle('ready',!!(mine&&p.energy>=100&&!p.useSkill));tSkill.classList.toggle('on',!!(mine&&p.useSkill))}
 };
 
 // ===== BƯỚC 19: VÒNG LẶP GAME =====
